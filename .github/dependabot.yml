@@ -99,7 +99,22 @@ updates:
           interval: 'weekly'
       open-pull-requests-limit: 5
       groups:
-          actions-minor-and-patch:
+          # One group across every update-type, majors included. checkout and
+          # setup-node sit on ADJACENT lines in all four jobs, so two solo
+          # major PRs conflict textually in every one of them — proven when
+          # #4 and #5 arrived separately and the second would not rebase.
+          # `@dependabot recreate` is the only way out, per PR. The npm
+          # argument for solo majors (a risky bump deserves its own review)
+          # does not transfer: these are first-party GitHub actions whose
+          # diffs are one `uses:` line each.
+          actions:
+              patterns:
+                  - '*'
               update-types:
+                  - 'major'
                   - 'minor'
                   - 'patch'
+          security:
+              applies-to: security-updates
+              patterns:
+                  - '*'
