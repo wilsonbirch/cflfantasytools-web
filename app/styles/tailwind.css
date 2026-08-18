@@ -1,0 +1,7 @@
+@import '@heroui/styles/css';
+
+@theme {
+    --font-sans: 'Inter', 'system-ui', 'sans-serif';
+    /* Brand blue #0066ff in OKLCH (was the v2 primary/focus color). */
+    --color-accent: oklch(58.06% 0.2476 257.5);
+}

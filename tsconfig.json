@@ -1,0 +1,33 @@
+{
+    "include": ["**/*.ts", "**/*.tsx", ".react-router/types/**/*"],
+    "exclude": ["node_modules", "build"],
+    "compilerOptions": {
+        /* Language and environment. 3DF still carried target es2016 / module
+           ES2015 from a scaffold — stale for Node 22 + Vite 8, and it blocked
+           top-level await and dynamic import in tests. */
+        "target": "es2022",
+        "lib": ["DOM", "DOM.Iterable", "es2022"],
+        "module": "esnext",
+        "moduleResolution": "bundler",
+        "jsx": "react-jsx",
+        "types": ["node", "vite/client"],
+
+        /* React Router writes route types into .react-router/types; rootDirs
+           lets a route import them as './+types/<route>'. */
+        "rootDirs": [".", "./.react-router/types"],
+        "paths": {
+            "~/*": ["./app/*"]
+        },
+
+        /* Type-check only — Vite does the emitting. */
+        "noEmit": true,
+        "isolatedModules": true,
+        "verbatimModuleSyntax": true,
+        "esModuleInterop": true,
+        "resolveJsonModule": true,
+        "forceConsistentCasingInFileNames": true,
+
+        "strict": true,
+        "skipLibCheck": true
+    }
+}
