@@ -11,8 +11,15 @@ const config: CodegenConfig = {
     generates: {
         'app/graphql/generated/': {
             preset: 'client',
+            presetConfig: {
+                // No fragment masking — simpler ergonomics for an app this size.
+                fragmentMasking: false,
+            },
             config: {
+                // The api serializes DateTime as ISO strings over the wire.
                 scalars: { DateTime: 'string', JSON: 'unknown' },
+                // Required under verbatimModuleSyntax, which tsconfig enables.
+                useTypeImports: true,
             },
         },
     },
