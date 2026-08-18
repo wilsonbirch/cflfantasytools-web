@@ -1,0 +1,105 @@
+version: 2
+updates:
+    - package-ecosystem: 'npm'
+      directory: '/'
+      schedule:
+          interval: 'weekly'
+      open-pull-requests-limit: 10
+      groups:
+          # Coupled stacks come FIRST — a group earlier in this list wins the
+          # package, and minor-and-patch below would otherwise claim their
+          # minor/patch bumps and split the stack across PRs.
+          #
+          # Each sets update-types explicitly: dependabot defaults a group to
+          # [minor, patch], which lets a solo major escape and land a
+          # half-upgraded stack.
+          react:
+              patterns:
+                  - 'react'
+                  - 'react-dom'
+                  - '@types/react'
+                  - '@types/react-dom'
+              update-types:
+                  - 'major'
+                  - 'minor'
+                  - 'patch'
+          # The framework packages share a version line — @react-router/dev
+          # generates types the router runtime has to match, and
+          # @react-router/node and /serve ship as one release.
+          react-router:
+              patterns:
+                  - 'react-router'
+                  - '@react-router/*'
+              update-types:
+                  - 'major'
+                  - 'minor'
+                  - 'patch'
+          # The codegen CLI and the preset emit and consume the same artifacts;
+          # graphql-request is the client those artifacts are typed against.
+          # A partial bump regenerates code the others cannot read.
+          graphql:
+              patterns:
+                  - 'graphql'
+                  - 'graphql-request'
+                  - '@graphql-codegen/*'
+              update-types:
+                  - 'major'
+                  - 'minor'
+                  - 'patch'
+          vitest:
+              patterns:
+                  - 'vitest'
+                  - '@vitest/*'
+                  - 'vitest-mock-extended'
+              update-types:
+                  - 'major'
+                  - 'minor'
+                  - 'patch'
+          # tailwindcss and its vite plugin are one release train since v4
+          # moved the engine into the plugin.
+          tailwind:
+              patterns:
+                  - 'tailwindcss'
+                  - '@tailwindcss/*'
+              update-types:
+                  - 'major'
+                  - 'minor'
+                  - 'patch'
+          minor-and-patch:
+              update-types:
+                  - 'minor'
+                  - 'patch'
+          # Advisory-driven PRs bypass every version-update group above unless
+          # a group opts in with applies-to. Without this, one advisory wave
+          # arrives as N solo PRs, each needing its own branch update and CI run.
+          security:
+              applies-to: security-updates
+              patterns:
+                  - '*'
+      # Nothing is ignored here yet, deliberately. This repo is still on
+      # typescript 5.x while the API runs 6.x, so the next major is one we
+      # want — blocking majors wholesale, as the API config does, would pin
+      # this below a version already proven in the other repo.
+      #
+      # typescript 7 IS known-blocked: it is the native compiler rewrite and
+      # typescript-eslint hard-caps its peer range below it, so `npm ci`
+      # ERESOLVEs rather than merely warning. Add the ignore below once this
+      # repo reaches 6.x, rather than now:
+      #
+      #   ignore:
+      #     - dependency-name: 'typescript'
+      #       update-types: ['version-update:semver-major']
+      #
+      # Until then a typescript 7 PR will simply fail CI at install, which is
+      # informative rather than harmful.
+
+    - package-ecosystem: 'github-actions'
+      directory: '/'
+      schedule:
+          interval: 'weekly'
+      open-pull-requests-limit: 5
+      groups:
+          actions-minor-and-patch:
+              update-types:
+                  - 'minor'
+                  - 'patch'
