@@ -1,0 +1,68 @@
+# CI — pull requests only. Branch protection requires the branch to be up to
+# date before merging, so the merge commit is byte-identical to what ran here.
+name: CI
+
+on:
+    pull_request:
+    workflow_dispatch:
+
+concurrency:
+    group: ci-${{ github.ref }}
+    cancel-in-progress: true
+
+env:
+    SESSION_SECRET: ci-session-secret
+
+jobs:
+    lint:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: npm
+            - run: npm ci
+            - run: npm run lint
+            - run: npm run format:check
+
+    typecheck:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: npm
+            - run: npm ci
+            - run: npm run typecheck
+            # TODO(phase 5): once real GraphQL documents exist, add the codegen
+            # drift gate here:
+            #   - run: npm run codegen
+            #   - run: git diff --exit-code app/graphql/generated
+            # With zero documents the client preset emits an empty module, so
+            # the check would assert nothing.
+
+    test:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: npm
+            - run: npm ci
+            - run: npm run test
+
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: npm
+            - run: npm ci
+            # The only check that catches .server.ts leaking into the client
+            # bundle — a class of bug invisible to dev, unit tests and tsc.
+            - run: npm run build

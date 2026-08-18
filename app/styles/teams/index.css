@@ -1,0 +1,47 @@
+/* Per-club colours, keyed by SLUG rather than a positional id.
+   3DF keyed these .team-1 .. .team-9, which is the same 1-9 space that
+   collides with the CFL feeds' squad ids (theirs are nearly reversed).
+   Slugs cannot be confused with either. */
+@import './saskatchewan-roughriders.css';
+@import './bc-lions.css';
+@import './edmonton-elks.css';
+@import './calgary-stampeders.css';
+@import './montreal-alouettes.css';
+@import './winnipeg-blue-bombers.css';
+@import './hamilton-tiger-cats.css';
+@import './toronto-argonauts.css';
+@import './ottawa-redblacks.css';
+
+.team-link {
+    color: var(--team-primary);
+    transition: color 0.2s ease;
+}
+
+.team-link:hover {
+    color: var(--team-secondary);
+}
+
+.team-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 1rem;
+    min-width: 5rem;
+    border: 2px solid var(--team-primary);
+    border-radius: 0.5rem;
+    background-color: transparent;
+    color: hsl(var(--heroui-foreground));
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    transition:
+        background-color 0.2s ease,
+        color 0.2s ease,
+        border-color 0.2s ease;
+}
+
+.team-button:hover {
+    background-color: var(--team-primary);
+    border-color: var(--team-primary);
+    color: #ffffff;
+}
