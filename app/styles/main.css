@@ -28,3 +28,39 @@ body {
     margin-inline: auto;
     width: fit-content;
 }
+
+/* Plain tables: the stats surfaces are read-only and SSR-rendered, so native
+   <table> beats a client-side grid. Wrap in .table-wrap for small screens. */
+.table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+    white-space: nowrap;
+}
+
+.data-table th,
+.data-table td {
+    padding: 0.375rem 0.625rem;
+    border-bottom: 1px solid hsl(var(--heroui-default-200, 0 0% 50%) / 0.4);
+    text-align: left;
+}
+
+.data-table th {
+    font-weight: 600;
+    color: hsl(var(--heroui-default-500, 0 0% 60%));
+}
+
+.data-table td.num,
+.data-table th.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.data-table tbody tr:hover {
+    background: hsl(var(--heroui-default-100, 0 0% 50%) / 0.3);
+}

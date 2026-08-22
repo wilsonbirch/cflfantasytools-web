@@ -36,3 +36,6 @@ export const getSession = (request: Request) =>
 
 export const commitSession = sessionStorage.commitSession
 export const destroySession = sessionStorage.destroySession
+
+/** Cheap "is anyone signed in?" check that never hits the api. */
+export const hasSession = async (request: Request) => (await getSession(request)).has('tokens')
