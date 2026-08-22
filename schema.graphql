@@ -1,7 +1,58 @@
+type Account {
+  createdAt: DateTime!
+  email: String!
+  id: Int!
+  role: Role!
+  uuid: String!
+}
+
+type AuthPayload {
+  accessToken: String!
+  account: Account!
+
+  """One-time use. Each refresh returns a new token and revokes this one."""
+  refreshToken: String!
+}
+
 """
 A date-time string at UTC, such as 2007-12-03T10:15:30Z, compliant with the `date-time` format outlined in section 5.6 of the RFC 3339 profile of the ISO 8601 standard for representation of dates and times using the Gregorian calendar.
 """
 scalar DateTime
+
+"""One posted depth chart; `url` is the club's own PDF."""
+type DepthChart {
+  """When the scraper first saw the chart."""
+  detectedAt: DateTime!
+  id: Int!
+  publishedAt: DateTime!
+  season: String!
+  title: String!
+  url: String!
+  uuid: String!
+  week: Int!
+  year: Int!
+}
+
+"""A team's depth charts for one season, newest chart first."""
+type DepthChartList {
+  charts: [DepthChart!]!
+  id: Int!
+  team: Team!
+  updatedAt: DateTime!
+  uuid: String!
+  year: Int!
+}
+
+type Drive {
+  id: Int!
+  isScoring: Boolean!
+  number: Int!
+
+  """Signed from the possessing team's view: negative means the opponent scored."""
+  points: Int
+  startQuarter: Int
+  team: Team!
+}
 
 enum EmailStatus {
   BOUNCED
@@ -12,10 +63,50 @@ enum EmailStatus {
   SENT
 }
 
+"""One play-by-play fixture. Scores and stats are derived from plays at read time."""
+type Game {
+  awayScore: Int
+  awayTeam: Team
+  boxScore: [TeamBoxScore!]!
+  date: DateTime
+  drives: [Drive!]!
+  homeScore: Int
+  homeTeam: Team
+  id: Int!
+
+  """Chronological, including no-plays."""
+  plays: [Play!]!
+  playerStats: [PlayerGameStats!]!
+  ruleEra: RuleEra
+  year: Int!
+}
+
 """
 The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
 """
 scalar JSON
+
+type Job {
+  attempts: Int!
+  createdAt: DateTime!
+  error: String
+  finishedAt: DateTime
+  id: Int!
+  kind: String!
+  payload: JSON!
+  runAt: DateTime!
+  startedAt: DateTime
+  status: JobStatus!
+}
+
+"""Freshness of one scheduled background job."""
+type JobHealth {
+  ageMinutes: Int
+  expectedEveryMinutes: Int!
+  isStale: Boolean!
+  kind: String!
+  lastSuccessAt: DateTime
+}
 
 enum JobStatus {
   FAILED
@@ -24,8 +115,169 @@ enum JobStatus {
   SUCCEEDED
 }
 
+type Mutation {
+  """Admin only."""
+  enqueueJob(kind: String!, payload: JSON): Job!
+
+  """Never reveals whether the email exists: wrong email and wrong password fail identically."""
+  login(email: String!, password: String!): AuthPayload!
+
+  """Revokes the session the refresh token belongs to. Idempotent."""
+  logout(refreshToken: String!): Boolean!
+
+  """Rotates a refresh token. Reusing an already-rotated token revokes the whole session."""
+  refresh(refreshToken: String!): AuthPayload!
+  register(email: String!, password: String!): AuthPayload!
+
+  """Signed in only."""
+  subscribe(teamSlug: String!): NotificationSubscription!
+
+  """Signed in only."""
+  unsubscribe(teamSlug: String!): NotificationSubscription!
+
+  """Signed link from a notification email; needs no session."""
+  unsubscribeWithToken(token: String!): Boolean!
+
+  """Admin only."""
+  updateTeamSource(id: Int!, input: TeamSourceInput!): TeamSource!
+}
+
+type NotificationSubscription {
+  createdAt: DateTime!
+  enabled: Boolean!
+  id: Int!
+  team: Team!
+  updatedAt: DateTime!
+}
+
+enum PassDepth {
+  DEEP
+  SHORT
+}
+
+enum PassDirection {
+  LEFT
+  MIDDLE
+  RIGHT
+}
+
+type Play {
+  airYards: Int
+  clock: String!
+  description: String!
+  distance: String
+  down: Int
+  driveNumber: Int!
+  epa: Float
+  id: Int!
+
+  """Whether a pass was caught. Null on non-pass plays. A reception is isComplete, never subtype."""
+  isComplete: Boolean
+  isFirstDown: Boolean!
+
+  """A penalty wiped this snap; excluded from all stats."""
+  isNoPlay: Boolean!
+  isScoring: Boolean!
+  isTurnover: Boolean!
+  number: Int!
+  passer: String
+  phase: String!
+
+  """Points scored on this play, signed for the play's own team; -6 is a return touchdown."""
+  points: Int
+
+  """1-4; null in overtime or when the feed gives no quarter."""
+  quarter: Int
+  receiver: String
+  rusher: String
+  subtype: String
+  targetDepth: PassDepth
+  targetDirection: PassDirection
+  team: Team!
+  type: String!
+  yardLine: Int
+  yardsAfterCatch: Int
+  yardsGained: Int
+}
+
+"""Per-player production in one game, from plays (no-plays excluded)."""
+type PlayerGameStats {
+  completions: Int!
+  epa: Float!
+  gameId: Int!
+  interceptions: Int!
+  passAttempts: Int!
+  passingTouchdowns: Int!
+  passingYards: Int!
+
+  """Name as it appears in the play text, e.g. "#12 A.Smith"."""
+  player: String!
+  receivingTouchdowns: Int!
+  receivingYards: Int!
+  receptions: Int!
+  rushAttempts: Int!
+  rushingTouchdowns: Int!
+  rushingYards: Int!
+  targets: Int!
+  targetsByZone: [ZoneTargets!]!
+  team: Team!
+}
+
+"""Per-player production over a season, from plays (no-plays excluded)."""
+type PlayerSeasonStats {
+  completions: Int!
+  epa: Float!
+  games: Int!
+  interceptions: Int!
+  passAttempts: Int!
+  passingTouchdowns: Int!
+  passingYards: Int!
+
+  """Name as it appears in the play text, e.g. "#12 A.Smith"."""
+  player: String!
+  receivingTouchdowns: Int!
+  receivingYards: Int!
+  receptions: Int!
+  rushAttempts: Int!
+  rushingTouchdowns: Int!
+  rushingYards: Int!
+  targets: Int!
+  targetsByZone: [ZoneTargets!]!
+  team: Team!
+  year: Int!
+}
+
 type Query {
-  isUp: Boolean
+  depthChartLists(teamSlug: String!, year: Int): [DepthChartList!]!
+  depthChartYears(teamSlug: String!): [Int!]!
+  game(id: Int!): Game
+
+  """Newest first. Only games with parsed plays."""
+  games(limit: Int = 50, offset: Int = 0, teamSlug: String, year: Int!): [Game!]!
+  isUp: Boolean!
+
+  """Whether each scheduled job has run recently enough."""
+  jobHealth: [JobHealth!]!
+
+  """Admin only. Newest first."""
+  jobs(kind: String, limit: Int = 50, status: JobStatus): [Job!]!
+
+  """Null when signed out."""
+  me: Account
+
+  """Signed in only."""
+  mySubscriptions: [NotificationSubscription!]!
+
+  """Sorted by targets + pass attempts + rush attempts, descending."""
+  playerSeasonStats(limit: Int = 100, offset: Int = 0, teamSlug: String, year: Int!): [PlayerSeasonStats!]!
+
+  """Admin only. Newest first."""
+  scrapeRuns(limit: Int = 50, teamSlug: String): [ScrapeRun!]!
+  team(slug: String!): Team
+
+  """Admin only."""
+  teamSources: [TeamSource!]!
+  teams: [Team!]!
 }
 
 enum Role {
@@ -33,8 +285,87 @@ enum Role {
   USER
 }
 
+enum RuleEra {
+  E2026
+  E2027
+  PRE_2026
+}
+
+type ScrapeRun {
+  addedCount: Int
+  error: String
+  finishedAt: DateTime
+  id: Int!
+  itemCount: Int
+  startedAt: DateTime!
+  status: ScrapeStatus!
+  team: Team!
+}
+
 enum ScrapeStatus {
   FAILED
   OK
   REJECTED
+}
+
+type Team {
+  abbreviation: String!
+  city: String
+  id: Int!
+  isActive: Boolean!
+  name: String!
+  nameFr: String
+  shortName: String
+  slug: String!
+  uuid: String!
+}
+
+"""One team's totals in a game, from plays (no-plays excluded)."""
+type TeamBoxScore {
+  completions: Int!
+  epa: Float!
+  firstDowns: Int!
+  passAttempts: Int!
+  passingYards: Int!
+  plays: Int!
+  points: Int!
+  rushAttempts: Int!
+  rushingYards: Int!
+  team: Team!
+  totalYards: Int!
+  turnovers: Int!
+}
+
+type TeamSource {
+  config: JSON!
+  enabled: Boolean!
+  id: Int!
+  kind: String!
+  lastError: String
+  lastItemCount: Int
+  lastOkAt: DateTime
+  requiresBrowser: Boolean!
+  strategy: String!
+  team: Team!
+  updatedAt: DateTime!
+  url: String!
+}
+
+"""Every field optional; omitted fields are left unchanged."""
+input TeamSourceInput {
+  config: JSON
+  enabled: Boolean
+  requiresBrowser: Boolean
+  strategy: String
+  url: String
+}
+
+"""Targets to one (depth, direction) zone."""
+type ZoneTargets {
+  depth: PassDepth!
+  direction: PassDirection!
+  epa: Float!
+  receptions: Int!
+  targets: Int!
+  yards: Int!
 }
