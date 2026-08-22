@@ -48,7 +48,7 @@ type Drive {
   isScoring: Boolean!
   number: Int!
 
-  """Signed from the possessing team's view: negative means the opponent scored."""
+  """Signed for the possessing team: negative means the opponent scored."""
   points: Int
   startQuarter: Int
   team: Team!
@@ -63,7 +63,7 @@ enum EmailStatus {
   SENT
 }
 
-"""One play-by-play fixture. Scores and stats are derived from plays at read time."""
+"""One fixture. Scores and stats are derived from plays at read time."""
 type Game {
   awayScore: Int
   awayTeam: Team
@@ -74,9 +74,10 @@ type Game {
   homeTeam: Team
   id: Int!
 
+  playerStats: [PlayerGameStats!]!
+
   """Chronological, including no-plays."""
   plays: [Play!]!
-  playerStats: [PlayerGameStats!]!
   ruleEra: RuleEra
   year: Int!
 }
@@ -119,13 +120,13 @@ type Mutation {
   """Admin only."""
   enqueueJob(kind: String!, payload: JSON): Job!
 
-  """Never reveals whether the email exists: wrong email and wrong password fail identically."""
+  """Wrong email and wrong password fail identically."""
   login(email: String!, password: String!): AuthPayload!
 
   """Revokes the session the refresh token belongs to. Idempotent."""
   logout(refreshToken: String!): Boolean!
 
-  """Rotates a refresh token. Reusing an already-rotated token revokes the whole session."""
+  """Rotates the token; reusing a rotated token revokes the whole session."""
   refresh(refreshToken: String!): AuthPayload!
   register(email: String!, password: String!): AuthPayload!
 
@@ -171,7 +172,7 @@ type Play {
   epa: Float
   id: Int!
 
-  """Whether a pass was caught. Null on non-pass plays. A reception is isComplete, never subtype."""
+  """Whether a pass was caught; null on non-pass plays."""
   isComplete: Boolean
   isFirstDown: Boolean!
 
@@ -183,7 +184,7 @@ type Play {
   passer: String
   phase: String!
 
-  """Points scored on this play, signed for the play's own team; -6 is a return touchdown."""
+  """Points on this play, signed for its team; -6 is a return touchdown."""
   points: Int
 
   """1-4; null in overtime or when the feed gives no quarter."""

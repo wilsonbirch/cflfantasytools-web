@@ -2,7 +2,7 @@ import { data, redirect } from 'react-router'
 import { graphql } from '~/graphql/generated'
 import type { Role } from '~/graphql/generated/graphql'
 import { gqlAsViewer } from './gql.server'
-import { getSession } from './session.server'
+import { hasSession } from './session.server'
 
 export type Viewer = { email: string; role: Role }
 
@@ -19,7 +19,7 @@ const ME = graphql(`
 export async function getViewer(
     request: Request,
 ): Promise<{ viewer: Viewer | null; headers?: HeadersInit }> {
-    if (!(await getSession(request)).has('tokens')) return { viewer: null }
+    if (!(await hasSession(request))) return { viewer: null }
     const { data, headers } = await gqlAsViewer(request, ME)
     return { viewer: data?.me ?? null, headers }
 }
