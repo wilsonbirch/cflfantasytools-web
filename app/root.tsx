@@ -1,5 +1,18 @@
-import { isRouteErrorResponse, Links, Meta, Outlet, Scripts, ScrollRestoration } from 'react-router'
+import {
+    data,
+    Form,
+    isRouteErrorResponse,
+    Link,
+    Links,
+    Meta,
+    NavLink,
+    Outlet,
+    Scripts,
+    ScrollRestoration,
+    useRouteLoaderData,
+} from 'react-router'
 import type { Route } from './+types/root'
+import { getViewer } from './lib/auth.server'
 import './styles/tailwind.css'
 import './styles/main.css'
 import './styles/teams/index.css'
@@ -13,6 +26,62 @@ export const links: Route.LinksFunction = () => [
     },
 ]
 
+export async function loader({ request }: Route.LoaderArgs) {
+    const { viewer, headers } = await getViewer(request)
+    return data({ viewer }, { headers })
+}
+
+const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+    `rounded px-2 py-1 text-sm hover:underline ${isActive ? 'font-semibold underline' : ''}`
+
+function Nav() {
+    const viewer = useRouteLoaderData<typeof loader>('root')?.viewer ?? null
+    return (
+        <header className="border-b border-default-200">
+            <nav
+                aria-label="Main"
+                className="mx-auto flex max-w-6xl flex-wrap items-center gap-1 px-4 py-2"
+            >
+                <Link to="/" className="mr-4 font-semibold">
+                    3 Down Fantasy
+                </Link>
+                <NavLink to="/teams" className={navLinkClass}>
+                    Teams
+                </NavLink>
+                <NavLink to="/games" className={navLinkClass}>
+                    Games
+                </NavLink>
+                <NavLink to="/stats" className={navLinkClass}>
+                    Stats
+                </NavLink>
+                {viewer?.role === 'ADMIN' && (
+                    <NavLink to="/admin" className={navLinkClass}>
+                        Admin
+                    </NavLink>
+                )}
+                <span className="ml-auto flex items-center gap-1">
+                    {viewer ? (
+                        <>
+                            <NavLink to="/account" className={navLinkClass}>
+                                Account
+                            </NavLink>
+                            <Form method="post" action="/logout">
+                                <button type="submit" className="px-2 py-1 text-sm hover:underline">
+                                    Log out
+                                </button>
+                            </Form>
+                        </>
+                    ) : (
+                        <NavLink to="/login" className={navLinkClass}>
+                            Log in
+                        </NavLink>
+                    )}
+                </span>
+            </nav>
+        </header>
+    )
+}
+
 export function Layout({ children }: { children: React.ReactNode }) {
     return (
         <html lang="en" className="dark">
@@ -23,7 +92,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <Links />
             </head>
             <body className="bg-grain min-h-screen">
-                {children}
+                <Nav />
+                <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
                 <ScrollRestoration />
                 <Scripts />
             </body>
@@ -43,9 +113,9 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
           : 'Something went wrong'
 
     return (
-        <main className="flex min-h-screen flex-col items-center justify-center gap-3 p-8">
+        <div className="flex flex-col items-center gap-3 p-8">
             <h1 className="text-2xl font-semibold">Something went wrong</h1>
             <p className="text-default-500">{message}</p>
-        </main>
+        </div>
     )
 }

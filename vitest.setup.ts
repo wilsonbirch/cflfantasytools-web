@@ -7,6 +7,7 @@ import { vi } from 'vitest'
 vi.mock('~/lib/gql.server', () => ({
     gqlAsViewer: vi.fn(async () => ({ data: {} })),
     gqlAnonymous: vi.fn(async () => ({})),
+    tokensFrom: vi.fn((p) => ({ ...p, accessTokenExpiresAt: 0 })),
 }))
 
 // Loaders import session.server transitively; give it a secret so importing a
