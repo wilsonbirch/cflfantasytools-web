@@ -6,6 +6,15 @@ import { gqlAnonymous } from '~/lib/gql.server'
 
 const CHARTS = graphql(`
     query DepthChartLists($teamSlug: String!, $year: Int!) {
+        team(slug: $teamSlug) {
+            coachingStaff(year: $year) {
+                id
+                role
+                person
+                effectiveFrom
+                effectiveTo
+            }
+        }
         depthChartLists(teamSlug: $teamSlug, year: $year) {
             year
             updatedAt
@@ -35,15 +44,24 @@ export async function loader({ params }: Route.LoaderArgs) {
     if (!Number.isInteger(year) || year < 2000 || year > 2100) {
         throw data('Bad year', { status: 400 })
     }
-    const { depthChartLists } = await gqlAnonymous(CHARTS, { teamSlug: params.slug, year })
-    return { year, charts: depthChartLists.flatMap((l) => l.charts) }
+    const { team, depthChartLists } = await gqlAnonymous(CHARTS, { teamSlug: params.slug, year })
+    return {
+        year,
+        staff: team?.coachingStaff ?? [],
+        charts: depthChartLists.flatMap((l) => l.charts),
+    }
 }
+
+const ROLES = ['HC', 'OC', 'DC'] as const
 
 const fmt = (iso: string) => new Date(iso).toISOString().slice(0, 10)
 const fmtKb = (bytes: number) => `${Math.max(1, Math.round(bytes / 1024))} KB`
 const statusColor = (s: string) => (s === 'OK' ? 'success' : s === 'FAILED' ? 'danger' : 'default')
 
-export default function TeamYear({ loaderData: { year, charts }, params }: Route.ComponentProps) {
+export default function TeamYear({
+    loaderData: { year, staff, charts },
+    params,
+}: Route.ComponentProps) {
     return (
         <>
             <p className="text-sm">
@@ -52,6 +70,32 @@ export default function TeamYear({ loaderData: { year, charts }, params }: Route
                 </Link>{' '}
                 <span className="text-default-500">/ {year}</span>
             </p>
+            {staff.length > 0 && (
+                <dl className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
+                    {ROLES.map((role) => {
+                        const people = staff.filter((s) => s.role === role)
+                        return people.length === 0 ? null : (
+                            <div key={role} className="flex gap-2">
+                                <dt className="text-default-500">{role}</dt>
+                                <dd>
+                                    {people.map((s) => (
+                                        <span key={s.id} className="block">
+                                            {s.person}
+                                            {(s.effectiveTo || people.length > 1) && (
+                                                <span className="text-default-500">
+                                                    {' '}
+                                                    ({fmt(s.effectiveFrom)} –{' '}
+                                                    {s.effectiveTo ? fmt(s.effectiveTo) : 'now'})
+                                                </span>
+                                            )}
+                                        </span>
+                                    ))}
+                                </dd>
+                            </div>
+                        )
+                    })}
+                </dl>
+            )}
             {charts.length === 0 ? (
                 <p className="text-default-500">No depth charts for {year}.</p>
             ) : (

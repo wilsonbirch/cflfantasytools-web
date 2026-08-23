@@ -24,6 +24,9 @@ export default function Admin() {
                 <NavLink to="/admin/jobs" className={linkClass}>
                     Jobs
                 </NavLink>
+                <NavLink to="/admin/staff" className={linkClass}>
+                    Coaching staff
+                </NavLink>
             </nav>
             <Outlet />
         </div>
