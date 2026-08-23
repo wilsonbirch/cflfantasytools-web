@@ -14,6 +14,7 @@ const REGISTER = graphql(`
         register(email: $email, password: $password) {
             accessToken
             refreshToken
+            accessTokenExpiresAt
         }
     }
 `)

@@ -36,12 +36,10 @@ jobs:
                   cache: npm
             - run: npm ci
             - run: npm run typecheck
-            # TODO(phase 5): once real GraphQL documents exist, add the codegen
-            # drift gate here:
-            #   - run: npm run codegen
-            #   - run: git diff --exit-code app/graphql/generated
-            # With zero documents the client preset emits an empty module, so
-            # the check would assert nothing.
+            # Codegen drift gate: the committed generated/ must match what the
+            # committed schema + documents produce.
+            - run: npm run codegen
+            - run: git diff --exit-code app/graphql/generated
 
     test:
         runs-on: ubuntu-latest
