@@ -10,11 +10,6 @@ export function parseYear(raw: string | null | undefined) {
     return Number.isInteger(year) && year >= 2000 && year <= 2100 ? year : new Date().getFullYear()
 }
 
-export const SEASONS = Array.from(
-    { length: new Date().getFullYear() - 2023 + 1 },
-    (_, i) => new Date().getFullYear() - i,
-)
-
 /** Zones in reading order: short row then deep row, each left -> middle -> right. */
 export const ZONES = [
     ['SHORT', 'LEFT'],

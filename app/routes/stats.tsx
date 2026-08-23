@@ -9,6 +9,7 @@ export const meta: Route.MetaFunction = () => [{ title: 'Season stats — 3 Down
 
 const SEASON_STATS = graphql(`
     query SeasonStats($year: Int!, $teamSlug: String) {
+        seasons
         teams {
             slug
             name
@@ -63,23 +64,23 @@ export async function loader({ request }: Route.LoaderArgs) {
     const team = url.searchParams.get('team') ?? ''
     const sortParam = url.searchParams.get('sort')
     const sort = isSortKey(sortParam) ? sortParam : null
-    const { teams, playerSeasonStats } = await gqlAnonymous(SEASON_STATS, {
+    const { seasons, teams, playerSeasonStats } = await gqlAnonymous(SEASON_STATS, {
         year,
         teamSlug: team || null,
     })
     // The api sorts by volume; sort the page we have by any column on request.
     const rows = sort ? [...playerSeasonStats].sort((a, b) => b[sort] - a[sort]) : playerSeasonStats
-    return { year, team, sort, teams, rows }
+    return { year, team, sort, seasons, teams, rows }
 }
 
 export default function Stats({
-    loaderData: { year, team, sort, teams, rows },
+    loaderData: { year, team, sort, seasons, teams, rows },
 }: Route.ComponentProps) {
     const href = (key: SortKey) => `?year=${year}&team=${team}&sort=${key}`
     return (
         <div className="flex flex-col gap-4">
             <h1 className="text-2xl font-semibold">Season leaders</h1>
-            <SeasonFilter year={year} team={team} teams={teams} />
+            <SeasonFilter year={year} seasons={seasons} team={team} teams={teams} />
             {rows.length === 0 ? (
                 <p className="text-default-500">No parsed games for {year}.</p>
             ) : (

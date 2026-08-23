@@ -23,8 +23,6 @@ const { commitSession, getSession } = await import('~/lib/session.server')
 
 beforeEach(() => request.mockReset())
 
-const jwt = (exp: number) => `h.${Buffer.from(JSON.stringify({ exp })).toString('base64url')}.s`
-
 async function requestWithTokens(tokens: {
     accessToken: string
     refreshToken: string
@@ -51,16 +49,12 @@ describe('gqlAnonymous', () => {
 })
 
 describe('tokensFrom', () => {
-    it('reads the expiry from the JWT exp claim', () => {
-        const exp = Math.floor(Date.now() / 1000) + 600
-        expect(tokensFrom({ accessToken: jwt(exp), refreshToken: 'r' }).accessTokenExpiresAt).toBe(
-            exp * 1000,
-        )
-    })
-
-    it('falls back to a default ttl when the token is opaque', () => {
-        const { accessTokenExpiresAt } = tokensFrom({ accessToken: 'opaque', refreshToken: 'r' })
-        expect(accessTokenExpiresAt).toBeGreaterThan(Date.now())
+    it('takes the expiry the api states, as epoch ms', () => {
+        const at = '2026-08-22T12:00:00.000Z'
+        expect(
+            tokensFrom({ accessToken: 'opaque', refreshToken: 'r', accessTokenExpiresAt: at })
+                .accessTokenExpiresAt,
+        ).toBe(Date.parse(at))
     })
 })
 
@@ -79,7 +73,14 @@ describe('gqlAsViewer', () => {
 
     it('rotates once for parallel loaders and returns a Set-Cookie', async () => {
         request.mockImplementation(async (headers) => {
-            if (!headers) return { refresh: { accessToken: 'a2', refreshToken: 'r2' } }
+            if (!headers)
+                return {
+                    refresh: {
+                        accessToken: 'a2',
+                        refreshToken: 'r2',
+                        accessTokenExpiresAt: new Date(Date.now() + 600_000).toISOString(),
+                    },
+                }
             return { me: { email: 'x' } }
         })
         const req = await requestWithTokens({

@@ -1,3 +1,16 @@
+# Phase-1 GraphQL contract for cflfantasytools. The body below is byte-identical
+# to cflfantasytools-api/schema.graphql once all three stacked PRs merge.
+#
+# 2026-08-22 additive changes after web feedback:
+#   - AuthPayload.accessTokenExpiresAt: DateTime! (no more decoding the JWT exp)
+#   - Query.seasons: [Int!]! (distinct Game/Match years, newest first)
+#   - Mutation.register description states the 8-character password minimum,
+#     which the server enforces
+#   - Mutation.enqueueJob description: unknown kinds are rejected with
+#     BAD_USER_INPUT (kind stays String! so existing client code is unchanged)
+#   mySubscriptions/subscribe/unsubscribe when anonymous raise the same
+#   GraphQLError shape as every guarded field: extensions.code UNAUTHENTICATED.
+
 type Account {
   createdAt: DateTime!
   email: String!
@@ -8,6 +21,9 @@ type Account {
 
 type AuthPayload {
   accessToken: String!
+
+  """Refresh before this; the access token is rejected after it."""
+  accessTokenExpiresAt: DateTime!
   account: Account!
 
   """One-time use. Each refresh returns a new token and revokes this one."""
@@ -73,7 +89,6 @@ type Game {
   homeScore: Int
   homeTeam: Team
   id: Int!
-
   playerStats: [PlayerGameStats!]!
 
   """Chronological, including no-plays."""
@@ -117,7 +132,7 @@ enum JobStatus {
 }
 
 type Mutation {
-  """Admin only."""
+  """Admin only. Unknown kinds are rejected with BAD_USER_INPUT."""
   enqueueJob(kind: String!, payload: JSON): Job!
 
   """Wrong email and wrong password fail identically."""
@@ -128,6 +143,8 @@ type Mutation {
 
   """Rotates the token; reusing a rotated token revokes the whole session."""
   refresh(refreshToken: String!): AuthPayload!
+
+  """Password must be at least 8 characters."""
   register(email: String!, password: String!): AuthPayload!
 
   """Signed in only."""
@@ -274,6 +291,9 @@ type Query {
 
   """Admin only. Newest first."""
   scrapeRuns(limit: Int = 50, teamSlug: String): [ScrapeRun!]!
+
+  """Every year with a game or a fixture, newest first."""
+  seasons: [Int!]!
   team(slug: String!): Team
 
   """Admin only."""

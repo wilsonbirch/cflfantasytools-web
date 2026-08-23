@@ -22,6 +22,7 @@ Mirror the four CI jobs before opening a PR:
 ```bash
 npm run lint && npm run format:check
 npm run typecheck
+npm run codegen && git diff --exit-code app/graphql/generated
 npm run test
 npm run build      # the ONLY check that catches .server.ts leaking client-side
 ```

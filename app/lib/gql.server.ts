@@ -14,8 +14,6 @@ const endpoint = process.env.API_GRAPHQL_URL ?? 'http://localhost:4000/graphql'
 
 /** Refresh when the access token has less than this left. */
 const REFRESH_SKEW_MS = 60_000
-/** Used when the access token carries no readable `exp`. */
-const DEFAULT_ACCESS_TTL_MS = 15 * 60_000
 
 export type GqlResult<T> = {
     data: T
@@ -34,26 +32,21 @@ const REFRESH = graphql(`
         refresh(refreshToken: $refreshToken) {
             accessToken
             refreshToken
+            accessTokenExpiresAt
         }
     }
 `)
 
-/** Build the cookie payload from an AuthPayload. Expiry is read from the JWT. */
-export function tokensFrom(payload: { accessToken: string; refreshToken: string }): SessionTokens {
+/** Build the cookie payload from an AuthPayload. The api states the expiry; the JWT is opaque to us. */
+export function tokensFrom(payload: {
+    accessToken: string
+    refreshToken: string
+    accessTokenExpiresAt: string
+}): SessionTokens {
     return {
         accessToken: payload.accessToken,
         refreshToken: payload.refreshToken,
-        accessTokenExpiresAt:
-            jwtExpiryMs(payload.accessToken) ?? Date.now() + DEFAULT_ACCESS_TTL_MS,
-    }
-}
-
-function jwtExpiryMs(token: string): number | undefined {
-    try {
-        const claims = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString())
-        return typeof claims.exp === 'number' ? claims.exp * 1000 : undefined
-    } catch {
-        return undefined
+        accessTokenExpiresAt: Date.parse(payload.accessTokenExpiresAt),
     }
 }
 

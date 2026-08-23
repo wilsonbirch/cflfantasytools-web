@@ -9,6 +9,7 @@ export const meta: Route.MetaFunction = () => [{ title: 'Games — 3 Down Fantas
 
 const GAMES = graphql(`
     query Games($year: Int!, $teamSlug: String) {
+        seasons
         teams {
             slug
             name
@@ -35,15 +36,17 @@ export async function loader({ request }: Route.LoaderArgs) {
     const url = new URL(request.url)
     const year = parseYear(url.searchParams.get('year'))
     const team = url.searchParams.get('team') ?? ''
-    const { teams, games } = await gqlAnonymous(GAMES, { year, teamSlug: team || null })
-    return { year, team, teams, games }
+    const { seasons, teams, games } = await gqlAnonymous(GAMES, { year, teamSlug: team || null })
+    return { year, team, seasons, teams, games }
 }
 
-export default function Games({ loaderData: { year, team, teams, games } }: Route.ComponentProps) {
+export default function Games({
+    loaderData: { year, team, seasons, teams, games },
+}: Route.ComponentProps) {
     return (
         <div className="flex flex-col gap-4">
             <h1 className="text-2xl font-semibold">Games</h1>
-            <SeasonFilter year={year} team={team} teams={teams} />
+            <SeasonFilter year={year} seasons={seasons} team={team} teams={teams} />
             {games.length === 0 ? (
                 <p className="text-default-500">No parsed games for {year}.</p>
             ) : (

@@ -14,6 +14,7 @@ const LOGIN = graphql(`
         login(email: $email, password: $password) {
             accessToken
             refreshToken
+            accessTokenExpiresAt
         }
     }
 `)
