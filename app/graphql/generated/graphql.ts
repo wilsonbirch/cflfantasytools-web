@@ -150,6 +150,47 @@ export enum EmailStatus {
   Sent = 'SENT'
 }
 
+/** A Game Zone fantasy player with the salary, projection and points the feed carries, plus our own projection for one gameweek. */
+export type FantasyPlayer = {
+  __typename?: 'FantasyPlayer';
+  /** Game Zone's average points per game played, as of the latest sync. */
+  avgPoints?: Maybe<Scalars['Float']['output']>;
+  firstName: Scalars['String']['output'];
+  /** Game Zone's own id for the player. */
+  gameZoneId: Scalars['Int']['output'];
+  /** Game Zone's own projection for the upcoming gameweek, as of the latest sync. */
+  gameZoneProjection?: Maybe<Scalars['Float']['output']>;
+  id: Scalars['Int']['output'];
+  /** Game Zone's injury note; null when there is none. */
+  injuredText?: Maybe<Scalars['String']['output']>;
+  /** False once the player has been absent from several consecutive feed pulls. */
+  isActive: Scalars['Boolean']['output'];
+  isLocked: Scalars['Boolean']['output'];
+  /** Points in the most recent completed gameweek; null when the player did not feature. */
+  lastGameweekPoints?: Maybe<Scalars['Float']['output']>;
+  lastName: Scalars['String']['output'];
+  /** First and last name. */
+  name: Scalars['String']['output'];
+  /** Every gameweek the player scored in, oldest first. */
+  pointsHistory: Array<GameweekPoints>;
+  position: PlayerPosition;
+  /** Our projection for the gameweek the query asked for; null when none has been fitted. */
+  projection?: Maybe<Projection>;
+  /** Game Zone salary as of the latest sync. */
+  salary?: Maybe<Scalars['Int']['output']>;
+  /** One point per change in salary, oldest first, ending at the current value. */
+  salaryHistory: Array<SalarySnapshot>;
+  /** Game Zone season total as of the latest sync. */
+  seasonPoints?: Maybe<Scalars['Float']['output']>;
+  /** Game Zone's availability status as the feed reports it. */
+  status?: Maybe<Scalars['String']['output']>;
+  team?: Maybe<Team>;
+  /** projection.points per $1000 of salary; null without both. */
+  value?: Maybe<Scalars['Float']['output']>;
+  /** Salary change this week, as the feed reports it. */
+  weekSalaryChange?: Maybe<Scalars['Int']['output']>;
+};
+
 /** One fixture. Scores and stats are derived from plays at read time. */
 export type Game = {
   __typename?: 'Game';
@@ -166,6 +207,29 @@ export type Game = {
   plays: Array<Play>;
   ruleEra?: Maybe<RuleEra>;
   year: Scalars['Int']['output'];
+};
+
+/** One Game Zone fantasy round and its fixtures. */
+export type Gameweek = {
+  __typename?: 'Gameweek';
+  endDate?: Maybe<Scalars['DateTime']['output']>;
+  gameZoneId: Scalars['Int']['output'];
+  id: Scalars['Int']['output'];
+  matches: Array<Match>;
+  name: Scalars['String']['output'];
+  startDate?: Maybe<Scalars['DateTime']['output']>;
+  /** scheduled, playing or complete, as the feed reports it. */
+  status: Scalars['String']['output'];
+  /** 1-based ordinal of the gameweek within its season, by start date. */
+  week: Scalars['Int']['output'];
+  year: Scalars['Int']['output'];
+};
+
+/** Fantasy points one player scored in one gameweek. */
+export type GameweekPoints = {
+  __typename?: 'GameweekPoints';
+  gameweek: Gameweek;
+  points: Scalars['Float']['output'];
 };
 
 export type Job = {
@@ -198,6 +262,23 @@ export enum JobStatus {
   Running = 'RUNNING',
   Succeeded = 'SUCCEEDED'
 }
+
+/** One fixture as Game Zone schedules it. */
+export type Match = {
+  __typename?: 'Match';
+  awayScore?: Maybe<Scalars['Int']['output']>;
+  awayTeam?: Maybe<Team>;
+  date?: Maybe<Scalars['DateTime']['output']>;
+  /** The parsed play-by-play for this fixture; null until captured. */
+  game?: Maybe<Game>;
+  gameZoneId: Scalars['Int']['output'];
+  gameweek: Gameweek;
+  homeScore?: Maybe<Scalars['Int']['output']>;
+  homeTeam?: Maybe<Team>;
+  id: Scalars['Int']['output'];
+  status: Scalars['String']['output'];
+  venue?: Maybe<Scalars['String']['output']>;
+};
 
 export type Mutation = {
   __typename?: 'Mutation';
@@ -365,6 +446,13 @@ export type PlayerGameStats = {
   team: Team;
 };
 
+export enum PlayerPosition {
+  Other = 'OTHER',
+  Quarterback = 'QUARTERBACK',
+  RunningBack = 'RUNNING_BACK',
+  WideReceiver = 'WIDE_RECEIVER'
+}
+
 /** Per-player production over a season, from plays (no-plays excluded). */
 export type PlayerSeasonStats = {
   __typename?: 'PlayerSeasonStats';
@@ -391,13 +479,52 @@ export type PlayerSeasonStats = {
   year: Scalars['Int']['output'];
 };
 
+/** Projected production for one player in one gameweek: role baseline + player quality (shrunk toward the league mean by sample size) + offensive-coordinator offset + opposing defensive-coordinator offset, fitted on the current rule era only. Every number is a per-game expectation. */
+export type Projection = {
+  __typename?: 'Projection';
+  /** Receiver position (1S, 2WK, ...) the role baseline was taken from; null when no chart names the player. */
+  alignment?: Maybe<Scalars['String']['output']>;
+  /** Expected EPA of the plays the player throws, carries or is targeted on. */
+  epa: Scalars['Float']['output'];
+  fittedAt: Scalars['DateTime']['output'];
+  /** Games behind the player term; the fewer, the more the projection is pooled. */
+  games: Scalars['Int']['output'];
+  gameweek: Gameweek;
+  id: Scalars['Int']['output'];
+  interceptions: Scalars['Float']['output'];
+  /** The opposing team; null when the fixture is not known. */
+  opponent?: Maybe<Team>;
+  passAttempts: Scalars['Float']['output'];
+  passingTouchdowns: Scalars['Float']['output'];
+  passingYards: Scalars['Float']['output'];
+  player: FantasyPlayer;
+  /** Fantasy points under the current Game Zone scoring, computed at read time from the stat projections. */
+  points: Scalars['Float']['output'];
+  receivingTouchdowns: Scalars['Float']['output'];
+  receivingYards: Scalars['Float']['output'];
+  receptions: Scalars['Float']['output'];
+  rushAttempts: Scalars['Float']['output'];
+  rushingTouchdowns: Scalars['Float']['output'];
+  rushingYards: Scalars['Float']['output'];
+  targets: Scalars['Float']['output'];
+};
+
 export type Query = {
   __typename?: 'Query';
+  /** Staff in post at any point during the season, every club unless teamSlug is given; by team, role, effectiveFrom. */
+  coachingStaff: Array<CoachingStaff>;
   depthChartLists: Array<DepthChartList>;
   depthChartYears: Array<Scalars['Int']['output']>;
+  /** One player, with our projection for gameweekId (the current gameweek when omitted). */
+  fantasyPlayer?: Maybe<FantasyPlayer>;
+  /** Active players by salary, highest first. gameweekId selects which projection is attached; omitted means the current gameweek (the first not yet complete). */
+  fantasyPlayers: Array<FantasyPlayer>;
   game?: Maybe<Game>;
   /** Newest first. Only games with parsed plays. */
   games: Array<Game>;
+  gameweek?: Maybe<Gameweek>;
+  /** A season's gameweeks by start date. */
+  gameweeks: Array<Gameweek>;
   isUp: Scalars['Boolean']['output'];
   /** Whether each scheduled job has run recently enough. */
   jobHealth: Array<JobHealth>;
@@ -409,6 +536,8 @@ export type Query = {
   mySubscriptions: Array<NotificationSubscription>;
   /** Sorted by targets + pass attempts + rush attempts, descending. */
   playerSeasonStats: Array<PlayerSeasonStats>;
+  /** The latest fitted projections for one gameweek (week is Gameweek.week), highest points first. */
+  projections: Array<Projection>;
   /** Admin only. Newest first. */
   scrapeRuns: Array<ScrapeRun>;
   /** Every year with a game or a fixture, newest first. */
@@ -422,6 +551,12 @@ export type Query = {
 };
 
 
+export type QueryCoachingStaffArgs = {
+  teamSlug?: InputMaybe<Scalars['String']['input']>;
+  year: Scalars['Int']['input'];
+};
+
+
 export type QueryDepthChartListsArgs = {
   teamSlug: Scalars['String']['input'];
   year?: InputMaybe<Scalars['Int']['input']>;
@@ -430,6 +565,21 @@ export type QueryDepthChartListsArgs = {
 
 export type QueryDepthChartYearsArgs = {
   teamSlug: Scalars['String']['input'];
+};
+
+
+export type QueryFantasyPlayerArgs = {
+  gameweekId?: InputMaybe<Scalars['Int']['input']>;
+  id: Scalars['Int']['input'];
+};
+
+
+export type QueryFantasyPlayersArgs = {
+  gameweekId?: InputMaybe<Scalars['Int']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+  position?: InputMaybe<PlayerPosition>;
+  teamSlug?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -446,6 +596,16 @@ export type QueryGamesArgs = {
 };
 
 
+export type QueryGameweekArgs = {
+  id: Scalars['Int']['input'];
+};
+
+
+export type QueryGameweeksArgs = {
+  year: Scalars['Int']['input'];
+};
+
+
 export type QueryJobsArgs = {
   kind?: InputMaybe<Scalars['String']['input']>;
   limit?: InputMaybe<Scalars['Int']['input']>;
@@ -457,6 +617,13 @@ export type QueryPlayerSeasonStatsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
   offset?: InputMaybe<Scalars['Int']['input']>;
   teamSlug?: InputMaybe<Scalars['String']['input']>;
+  year: Scalars['Int']['input'];
+};
+
+
+export type QueryProjectionsArgs = {
+  teamSlug?: InputMaybe<Scalars['String']['input']>;
+  week: Scalars['Int']['input'];
   year: Scalars['Int']['input'];
 };
 
@@ -488,6 +655,15 @@ export enum RuleEra {
   E2027 = 'E2027',
   Pre_2026 = 'PRE_2026'
 }
+
+/** A player's salary as of one sync. */
+export type SalarySnapshot = {
+  __typename?: 'SalarySnapshot';
+  capturedAt: Scalars['DateTime']['output'];
+  gameZoneProjection?: Maybe<Scalars['Float']['output']>;
+  salary: Scalars['Int']['output'];
+  weekSalaryChange?: Maybe<Scalars['Int']['output']>;
+};
 
 export type ScrapeRun = {
   __typename?: 'ScrapeRun';
@@ -536,6 +712,8 @@ export type TeamAlignment = {
   positions: Array<DepthChartPosition>;
   team: Team;
   week: Scalars['Int']['output'];
+  /** Every week of the season with a chart that parsed OK, ascending. */
+  weeks: Array<Scalars['Int']['output']>;
   year: Scalars['Int']['output'];
 };
 
@@ -650,6 +828,24 @@ export type DeleteCoachingStaffMutationVariables = Exact<{
 
 export type DeleteCoachingStaffMutation = { __typename?: 'Mutation', deleteCoachingStaff: boolean };
 
+export type FantasyPlayersQueryVariables = Exact<{
+  year: Scalars['Int']['input'];
+  gameweekId?: InputMaybe<Scalars['Int']['input']>;
+  position?: InputMaybe<PlayerPosition>;
+  teamSlug?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type FantasyPlayersQuery = { __typename?: 'Query', seasons: Array<number>, teams: Array<{ __typename?: 'Team', slug: string, name: string, abbreviation: string }>, gameweeks: Array<{ __typename?: 'Gameweek', id: number, week: number, name: string, status: string, startDate?: string | null }>, fantasyPlayers: Array<{ __typename?: 'FantasyPlayer', id: number, name: string, position: PlayerPosition, salary?: number | null, weekSalaryChange?: number | null, gameZoneProjection?: number | null, seasonPoints?: number | null, avgPoints?: number | null, lastGameweekPoints?: number | null, isLocked: boolean, injuredText?: string | null, status?: string | null, value?: number | null, team?: { __typename?: 'Team', slug: string, abbreviation: string } | null, projection?: { __typename?: 'Projection', points: number, epa: number, opponent?: { __typename?: 'Team', abbreviation: string } | null } | null }> };
+
+export type FantasyPlayerQueryVariables = Exact<{
+  id: Scalars['Int']['input'];
+  gameweekId?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+
+export type FantasyPlayerQuery = { __typename?: 'Query', fantasyPlayer?: { __typename?: 'FantasyPlayer', id: number, name: string, position: PlayerPosition, salary?: number | null, weekSalaryChange?: number | null, gameZoneProjection?: number | null, seasonPoints?: number | null, avgPoints?: number | null, lastGameweekPoints?: number | null, isLocked: boolean, injuredText?: string | null, status?: string | null, value?: number | null, team?: { __typename?: 'Team', slug: string, name: string, abbreviation: string } | null, pointsHistory: Array<{ __typename?: 'GameweekPoints', points: number, gameweek: { __typename?: 'Gameweek', id: number, week: number, year: number } }>, salaryHistory: Array<{ __typename?: 'SalarySnapshot', capturedAt: string, salary: number, weekSalaryChange?: number | null, gameZoneProjection?: number | null }>, projection?: { __typename?: 'Projection', points: number, epa: number, alignment?: string | null, games: number, fittedAt: string, passAttempts: number, passingYards: number, passingTouchdowns: number, interceptions: number, rushAttempts: number, rushingYards: number, rushingTouchdowns: number, targets: number, receptions: number, receivingYards: number, receivingTouchdowns: number, gameweek: { __typename?: 'Gameweek', week: number, year: number }, opponent?: { __typename?: 'Team', slug: string, abbreviation: string } | null } | null } | null };
+
 export type GameQueryVariables = Exact<{
   id: Scalars['Int']['input'];
 }>;
@@ -716,7 +912,7 @@ export type TeamAlignmentQueryVariables = Exact<{
 }>;
 
 
-export type TeamAlignmentQuery = { __typename?: 'Query', teamAlignment?: { __typename?: 'TeamAlignment', week: number, chart: { __typename?: 'DepthChart', title: string, url: string, publishedAt: string }, positions: Array<{ __typename?: 'DepthChartPosition', position: string, depth: number, player: string, jersey?: number | null }> } | null, depthChartLists: Array<{ __typename?: 'DepthChartList', charts: Array<{ __typename?: 'DepthChart', week: number, parseStatus?: DepthChartParseStatus | null }> }> };
+export type TeamAlignmentQuery = { __typename?: 'Query', teamAlignment?: { __typename?: 'TeamAlignment', week: number, weeks: Array<number>, chart: { __typename?: 'DepthChart', title: string, url: string, publishedAt: string }, positions: Array<{ __typename?: 'DepthChartPosition', position: string, depth: number, player: string, jersey?: number | null }> } | null };
 
 export type TeamQueryVariables = Exact<{
   slug: Scalars['String']['input'];
@@ -766,6 +962,8 @@ export const EnqueueJobDocument = {"kind":"Document","definitions":[{"kind":"Ope
 export const AdminStaffDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"AdminStaff"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"teams"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"slug"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"abbreviation"}},{"kind":"Field","name":{"kind":"Name","value":"coachingStaff"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"person"}},{"kind":"Field","name":{"kind":"Name","value":"effectiveFrom"}},{"kind":"Field","name":{"kind":"Name","value":"effectiveTo"}}]}}]}}]}}]} as unknown as DocumentNode<AdminStaffQuery, AdminStaffQueryVariables>;
 export const UpsertCoachingStaffDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"UpsertCoachingStaff"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"CoachingStaffInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"upsertCoachingStaff"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}}]}}]} as unknown as DocumentNode<UpsertCoachingStaffMutation, UpsertCoachingStaffMutationVariables>;
 export const DeleteCoachingStaffDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"DeleteCoachingStaff"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"deleteCoachingStaff"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}}]}]}}]} as unknown as DocumentNode<DeleteCoachingStaffMutation, DeleteCoachingStaffMutationVariables>;
+export const FantasyPlayersDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"FantasyPlayers"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"year"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"gameweekId"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"position"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"PlayerPosition"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"teamSlug"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"seasons"}},{"kind":"Field","name":{"kind":"Name","value":"teams"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"slug"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"abbreviation"}}]}},{"kind":"Field","name":{"kind":"Name","value":"gameweeks"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"year"},"value":{"kind":"Variable","name":{"kind":"Name","value":"year"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"week"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"startDate"}}]}},{"kind":"Field","name":{"kind":"Name","value":"fantasyPlayers"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"gameweekId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"gameweekId"}}},{"kind":"Argument","name":{"kind":"Name","value":"position"},"value":{"kind":"Variable","name":{"kind":"Name","value":"position"}}},{"kind":"Argument","name":{"kind":"Name","value":"teamSlug"},"value":{"kind":"Variable","name":{"kind":"Name","value":"teamSlug"}}},{"kind":"Argument","name":{"kind":"Name","value":"limit"},"value":{"kind":"IntValue","value":"400"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"position"}},{"kind":"Field","name":{"kind":"Name","value":"team"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"slug"}},{"kind":"Field","name":{"kind":"Name","value":"abbreviation"}}]}},{"kind":"Field","name":{"kind":"Name","value":"salary"}},{"kind":"Field","name":{"kind":"Name","value":"weekSalaryChange"}},{"kind":"Field","name":{"kind":"Name","value":"gameZoneProjection"}},{"kind":"Field","name":{"kind":"Name","value":"seasonPoints"}},{"kind":"Field","name":{"kind":"Name","value":"avgPoints"}},{"kind":"Field","name":{"kind":"Name","value":"lastGameweekPoints"}},{"kind":"Field","name":{"kind":"Name","value":"isLocked"}},{"kind":"Field","name":{"kind":"Name","value":"injuredText"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"value"}},{"kind":"Field","name":{"kind":"Name","value":"projection"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"points"}},{"kind":"Field","name":{"kind":"Name","value":"epa"}},{"kind":"Field","name":{"kind":"Name","value":"opponent"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"abbreviation"}}]}}]}}]}}]}}]} as unknown as DocumentNode<FantasyPlayersQuery, FantasyPlayersQueryVariables>;
+export const FantasyPlayerDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"FantasyPlayer"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"gameweekId"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"fantasyPlayer"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}},{"kind":"Argument","name":{"kind":"Name","value":"gameweekId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"gameweekId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"position"}},{"kind":"Field","name":{"kind":"Name","value":"team"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"slug"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"abbreviation"}}]}},{"kind":"Field","name":{"kind":"Name","value":"salary"}},{"kind":"Field","name":{"kind":"Name","value":"weekSalaryChange"}},{"kind":"Field","name":{"kind":"Name","value":"gameZoneProjection"}},{"kind":"Field","name":{"kind":"Name","value":"seasonPoints"}},{"kind":"Field","name":{"kind":"Name","value":"avgPoints"}},{"kind":"Field","name":{"kind":"Name","value":"lastGameweekPoints"}},{"kind":"Field","name":{"kind":"Name","value":"isLocked"}},{"kind":"Field","name":{"kind":"Name","value":"injuredText"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"value"}},{"kind":"Field","name":{"kind":"Name","value":"pointsHistory"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"points"}},{"kind":"Field","name":{"kind":"Name","value":"gameweek"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"week"}},{"kind":"Field","name":{"kind":"Name","value":"year"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"salaryHistory"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"capturedAt"}},{"kind":"Field","name":{"kind":"Name","value":"salary"}},{"kind":"Field","name":{"kind":"Name","value":"weekSalaryChange"}},{"kind":"Field","name":{"kind":"Name","value":"gameZoneProjection"}}]}},{"kind":"Field","name":{"kind":"Name","value":"projection"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"points"}},{"kind":"Field","name":{"kind":"Name","value":"epa"}},{"kind":"Field","name":{"kind":"Name","value":"alignment"}},{"kind":"Field","name":{"kind":"Name","value":"games"}},{"kind":"Field","name":{"kind":"Name","value":"fittedAt"}},{"kind":"Field","name":{"kind":"Name","value":"gameweek"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"week"}},{"kind":"Field","name":{"kind":"Name","value":"year"}}]}},{"kind":"Field","name":{"kind":"Name","value":"opponent"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"slug"}},{"kind":"Field","name":{"kind":"Name","value":"abbreviation"}}]}},{"kind":"Field","name":{"kind":"Name","value":"passAttempts"}},{"kind":"Field","name":{"kind":"Name","value":"passingYards"}},{"kind":"Field","name":{"kind":"Name","value":"passingTouchdowns"}},{"kind":"Field","name":{"kind":"Name","value":"interceptions"}},{"kind":"Field","name":{"kind":"Name","value":"rushAttempts"}},{"kind":"Field","name":{"kind":"Name","value":"rushingYards"}},{"kind":"Field","name":{"kind":"Name","value":"rushingTouchdowns"}},{"kind":"Field","name":{"kind":"Name","value":"targets"}},{"kind":"Field","name":{"kind":"Name","value":"receptions"}},{"kind":"Field","name":{"kind":"Name","value":"receivingYards"}},{"kind":"Field","name":{"kind":"Name","value":"receivingTouchdowns"}}]}}]}}]}}]} as unknown as DocumentNode<FantasyPlayerQuery, FantasyPlayerQueryVariables>;
 export const GameDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"Game"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"game"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"year"}},{"kind":"Field","name":{"kind":"Name","value":"date"}},{"kind":"Field","name":{"kind":"Name","value":"homeScore"}},{"kind":"Field","name":{"kind":"Name","value":"awayScore"}},{"kind":"Field","name":{"kind":"Name","value":"homeTeam"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"slug"}},{"kind":"Field","name":{"kind":"Name","value":"abbreviation"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"awayTeam"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"slug"}},{"kind":"Field","name":{"kind":"Name","value":"abbreviation"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"boxScore"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"team"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"slug"}},{"kind":"Field","name":{"kind":"Name","value":"abbreviation"}}]}},{"kind":"Field","name":{"kind":"Name","value":"points"}},{"kind":"Field","name":{"kind":"Name","value":"plays"}},{"kind":"Field","name":{"kind":"Name","value":"totalYards"}},{"kind":"Field","name":{"kind":"Name","value":"passAttempts"}},{"kind":"Field","name":{"kind":"Name","value":"completions"}},{"kind":"Field","name":{"kind":"Name","value":"passingYards"}},{"kind":"Field","name":{"kind":"Name","value":"rushAttempts"}},{"kind":"Field","name":{"kind":"Name","value":"rushingYards"}},{"kind":"Field","name":{"kind":"Name","value":"firstDowns"}},{"kind":"Field","name":{"kind":"Name","value":"turnovers"}},{"kind":"Field","name":{"kind":"Name","value":"epa"}}]}},{"kind":"Field","name":{"kind":"Name","value":"playerStats"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"player"}},{"kind":"Field","name":{"kind":"Name","value":"alignment"}},{"kind":"Field","name":{"kind":"Name","value":"team"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"slug"}},{"kind":"Field","name":{"kind":"Name","value":"abbreviation"}}]}},{"kind":"Field","name":{"kind":"Name","value":"passAttempts"}},{"kind":"Field","name":{"kind":"Name","value":"completions"}},{"kind":"Field","name":{"kind":"Name","value":"passingYards"}},{"kind":"Field","name":{"kind":"Name","value":"passingTouchdowns"}},{"kind":"Field","name":{"kind":"Name","value":"interceptions"}},{"kind":"Field","name":{"kind":"Name","value":"rushAttempts"}},{"kind":"Field","name":{"kind":"Name","value":"rushingYards"}},{"kind":"Field","name":{"kind":"Name","value":"rushingTouchdowns"}},{"kind":"Field","name":{"kind":"Name","value":"targets"}},{"kind":"Field","name":{"kind":"Name","value":"receptions"}},{"kind":"Field","name":{"kind":"Name","value":"receivingYards"}},{"kind":"Field","name":{"kind":"Name","value":"receivingTouchdowns"}},{"kind":"Field","name":{"kind":"Name","value":"epa"}},{"kind":"Field","name":{"kind":"Name","value":"targetsByZone"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"depth"}},{"kind":"Field","name":{"kind":"Name","value":"direction"}},{"kind":"Field","name":{"kind":"Name","value":"targets"}},{"kind":"Field","name":{"kind":"Name","value":"receptions"}},{"kind":"Field","name":{"kind":"Name","value":"yards"}},{"kind":"Field","name":{"kind":"Name","value":"epa"}}]}}]}}]}}]}}]} as unknown as DocumentNode<GameQuery, GameQueryVariables>;
 export const GamesDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"Games"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"year"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"teamSlug"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"seasons"}},{"kind":"Field","name":{"kind":"Name","value":"teams"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"slug"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"abbreviation"}}]}},{"kind":"Field","name":{"kind":"Name","value":"games"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"year"},"value":{"kind":"Variable","name":{"kind":"Name","value":"year"}}},{"kind":"Argument","name":{"kind":"Name","value":"teamSlug"},"value":{"kind":"Variable","name":{"kind":"Name","value":"teamSlug"}}},{"kind":"Argument","name":{"kind":"Name","value":"limit"},"value":{"kind":"IntValue","value":"100"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"date"}},{"kind":"Field","name":{"kind":"Name","value":"homeScore"}},{"kind":"Field","name":{"kind":"Name","value":"awayScore"}},{"kind":"Field","name":{"kind":"Name","value":"homeTeam"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"slug"}},{"kind":"Field","name":{"kind":"Name","value":"abbreviation"}}]}},{"kind":"Field","name":{"kind":"Name","value":"awayTeam"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"slug"}},{"kind":"Field","name":{"kind":"Name","value":"abbreviation"}}]}}]}}]}}]} as unknown as DocumentNode<GamesQuery, GamesQueryVariables>;
 export const LoginDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"Login"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"email"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"password"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"login"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"email"},"value":{"kind":"Variable","name":{"kind":"Name","value":"email"}}},{"kind":"Argument","name":{"kind":"Name","value":"password"},"value":{"kind":"Variable","name":{"kind":"Name","value":"password"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"accessToken"}},{"kind":"Field","name":{"kind":"Name","value":"refreshToken"}},{"kind":"Field","name":{"kind":"Name","value":"accessTokenExpiresAt"}}]}}]}}]} as unknown as DocumentNode<LoginMutation, LoginMutationVariables>;
@@ -774,7 +972,7 @@ export const RegisterDocument = {"kind":"Document","definitions":[{"kind":"Opera
 export const SeasonStatsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"SeasonStats"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"year"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"teamSlug"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"seasons"}},{"kind":"Field","name":{"kind":"Name","value":"teams"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"slug"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"abbreviation"}}]}},{"kind":"Field","name":{"kind":"Name","value":"playerSeasonStats"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"year"},"value":{"kind":"Variable","name":{"kind":"Name","value":"year"}}},{"kind":"Argument","name":{"kind":"Name","value":"teamSlug"},"value":{"kind":"Variable","name":{"kind":"Name","value":"teamSlug"}}},{"kind":"Argument","name":{"kind":"Name","value":"limit"},"value":{"kind":"IntValue","value":"200"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"player"}},{"kind":"Field","name":{"kind":"Name","value":"primaryAlignment"}},{"kind":"Field","name":{"kind":"Name","value":"team"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"slug"}},{"kind":"Field","name":{"kind":"Name","value":"abbreviation"}}]}},{"kind":"Field","name":{"kind":"Name","value":"games"}},{"kind":"Field","name":{"kind":"Name","value":"passAttempts"}},{"kind":"Field","name":{"kind":"Name","value":"completions"}},{"kind":"Field","name":{"kind":"Name","value":"passingYards"}},{"kind":"Field","name":{"kind":"Name","value":"passingTouchdowns"}},{"kind":"Field","name":{"kind":"Name","value":"interceptions"}},{"kind":"Field","name":{"kind":"Name","value":"rushAttempts"}},{"kind":"Field","name":{"kind":"Name","value":"rushingYards"}},{"kind":"Field","name":{"kind":"Name","value":"rushingTouchdowns"}},{"kind":"Field","name":{"kind":"Name","value":"targets"}},{"kind":"Field","name":{"kind":"Name","value":"receptions"}},{"kind":"Field","name":{"kind":"Name","value":"receivingYards"}},{"kind":"Field","name":{"kind":"Name","value":"receivingTouchdowns"}},{"kind":"Field","name":{"kind":"Name","value":"epa"}}]}}]}}]} as unknown as DocumentNode<SeasonStatsQuery, SeasonStatsQueryVariables>;
 export const JobHealthDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"JobHealth"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"jobHealth"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"kind"}},{"kind":"Field","name":{"kind":"Name","value":"ageMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"expectedEveryMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"isStale"}},{"kind":"Field","name":{"kind":"Name","value":"lastSuccessAt"}}]}}]}}]} as unknown as DocumentNode<JobHealthQuery, JobHealthQueryVariables>;
 export const DepthChartListsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"DepthChartLists"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"teamSlug"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"year"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"team"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"slug"},"value":{"kind":"Variable","name":{"kind":"Name","value":"teamSlug"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"coachingStaff"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"year"},"value":{"kind":"Variable","name":{"kind":"Name","value":"year"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"person"}},{"kind":"Field","name":{"kind":"Name","value":"effectiveFrom"}},{"kind":"Field","name":{"kind":"Name","value":"effectiveTo"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"depthChartLists"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"teamSlug"},"value":{"kind":"Variable","name":{"kind":"Name","value":"teamSlug"}}},{"kind":"Argument","name":{"kind":"Name","value":"year"},"value":{"kind":"Variable","name":{"kind":"Name","value":"year"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"year"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"charts"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"title"}},{"kind":"Field","name":{"kind":"Name","value":"url"}},{"kind":"Field","name":{"kind":"Name","value":"season"}},{"kind":"Field","name":{"kind":"Name","value":"week"}},{"kind":"Field","name":{"kind":"Name","value":"publishedAt"}},{"kind":"Field","name":{"kind":"Name","value":"detectedAt"}},{"kind":"Field","name":{"kind":"Name","value":"parseStatus"}},{"kind":"Field","name":{"kind":"Name","value":"files"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"sha256"}},{"kind":"Field","name":{"kind":"Name","value":"size"}},{"kind":"Field","name":{"kind":"Name","value":"fetchedAt"}},{"kind":"Field","name":{"kind":"Name","value":"url"}}]}}]}}]}}]}}]} as unknown as DocumentNode<DepthChartListsQuery, DepthChartListsQueryVariables>;
-export const TeamAlignmentDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"TeamAlignment"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"teamSlug"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"year"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"week"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"teamAlignment"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"teamSlug"},"value":{"kind":"Variable","name":{"kind":"Name","value":"teamSlug"}}},{"kind":"Argument","name":{"kind":"Name","value":"year"},"value":{"kind":"Variable","name":{"kind":"Name","value":"year"}}},{"kind":"Argument","name":{"kind":"Name","value":"week"},"value":{"kind":"Variable","name":{"kind":"Name","value":"week"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"week"}},{"kind":"Field","name":{"kind":"Name","value":"chart"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"title"}},{"kind":"Field","name":{"kind":"Name","value":"url"}},{"kind":"Field","name":{"kind":"Name","value":"publishedAt"}}]}},{"kind":"Field","name":{"kind":"Name","value":"positions"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"position"}},{"kind":"Field","name":{"kind":"Name","value":"depth"}},{"kind":"Field","name":{"kind":"Name","value":"player"}},{"kind":"Field","name":{"kind":"Name","value":"jersey"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"depthChartLists"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"teamSlug"},"value":{"kind":"Variable","name":{"kind":"Name","value":"teamSlug"}}},{"kind":"Argument","name":{"kind":"Name","value":"year"},"value":{"kind":"Variable","name":{"kind":"Name","value":"year"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"charts"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"week"}},{"kind":"Field","name":{"kind":"Name","value":"parseStatus"}}]}}]}}]}}]} as unknown as DocumentNode<TeamAlignmentQuery, TeamAlignmentQueryVariables>;
+export const TeamAlignmentDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"TeamAlignment"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"teamSlug"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"year"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"week"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"teamAlignment"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"teamSlug"},"value":{"kind":"Variable","name":{"kind":"Name","value":"teamSlug"}}},{"kind":"Argument","name":{"kind":"Name","value":"year"},"value":{"kind":"Variable","name":{"kind":"Name","value":"year"}}},{"kind":"Argument","name":{"kind":"Name","value":"week"},"value":{"kind":"Variable","name":{"kind":"Name","value":"week"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"week"}},{"kind":"Field","name":{"kind":"Name","value":"weeks"}},{"kind":"Field","name":{"kind":"Name","value":"chart"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"title"}},{"kind":"Field","name":{"kind":"Name","value":"url"}},{"kind":"Field","name":{"kind":"Name","value":"publishedAt"}}]}},{"kind":"Field","name":{"kind":"Name","value":"positions"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"position"}},{"kind":"Field","name":{"kind":"Name","value":"depth"}},{"kind":"Field","name":{"kind":"Name","value":"player"}},{"kind":"Field","name":{"kind":"Name","value":"jersey"}}]}}]}}]}}]} as unknown as DocumentNode<TeamAlignmentQuery, TeamAlignmentQueryVariables>;
 export const TeamDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"Team"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"slug"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"team"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"slug"},"value":{"kind":"Variable","name":{"kind":"Name","value":"slug"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"slug"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"abbreviation"}}]}},{"kind":"Field","name":{"kind":"Name","value":"depthChartYears"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"teamSlug"},"value":{"kind":"Variable","name":{"kind":"Name","value":"slug"}}}]}]}}]} as unknown as DocumentNode<TeamQuery, TeamQueryVariables>;
 export const MySubscriptionsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"MySubscriptions"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"mySubscriptions"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"enabled"}},{"kind":"Field","name":{"kind":"Name","value":"team"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"slug"}}]}}]}}]}}]} as unknown as DocumentNode<MySubscriptionsQuery, MySubscriptionsQueryVariables>;
 export const SubscribeDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"Subscribe"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"teamSlug"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"subscribe"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"teamSlug"},"value":{"kind":"Variable","name":{"kind":"Name","value":"teamSlug"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"enabled"}}]}}]}}]} as unknown as DocumentNode<SubscribeMutation, SubscribeMutationVariables>;
