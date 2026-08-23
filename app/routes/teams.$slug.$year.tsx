@@ -68,7 +68,10 @@ export default function TeamYear({
                 <Link to={`/teams/${params.slug}`} className="underline">
                     All seasons
                 </Link>{' '}
-                <span className="text-default-500">/ {year}</span>
+                <span className="text-default-500">/ {year}</span>{' '}
+                <Link to={`/teams/${params.slug}/${year}/alignment`} className="ml-3 underline">
+                    Receiver alignment
+                </Link>
             </p>
             {staff.length > 0 && (
                 <dl className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
