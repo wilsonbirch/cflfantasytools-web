@@ -17,6 +17,7 @@ const SEASON_STATS = graphql(`
         }
         playerSeasonStats(year: $year, teamSlug: $teamSlug, limit: 200) {
             player
+            primaryAlignment
             team {
                 slug
                 abbreviation
@@ -89,6 +90,9 @@ export default function Stats({
                         <thead>
                             <tr>
                                 <th>Player</th>
+                                <th title="Most common chart alignment, outside-in; S strong side, WK weak side">
+                                    Pos
+                                </th>
                                 {COLUMNS.map(([key, label]) => (
                                     <th
                                         key={key}
@@ -112,6 +116,7 @@ export default function Stats({
                                             {s.team.abbreviation}
                                         </span>
                                     </td>
+                                    <td>{s.primaryAlignment ?? '—'}</td>
                                     {COLUMNS.map(([key]) => (
                                         <td key={key} className="num">
                                             {key === 'epa' ? fmtEpa(s.epa) : s[key]}

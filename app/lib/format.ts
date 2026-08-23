@@ -22,3 +22,12 @@ export const ZONES = [
 
 export const zoneLabel = (depth: string, direction: string) =>
     `${depth === 'SHORT' ? 'Short' : 'Deep'} ${direction[0]}`
+
+/**
+ * Order receiver slots strong side first, then weak side, each outside-in
+ * (1S, 2S, 3S, 1WK, 2WK, ...). Labels the regex does not know sort last, as printed.
+ */
+export function alignmentOrder(position: string) {
+    const m = /^(\d+)(S|WK)$/.exec(position)
+    return m ? (m[2] === 'S' ? 0 : 100) + Number(m[1]) : 1000
+}

@@ -49,6 +49,7 @@ const GAME = graphql(`
             }
             playerStats {
                 player
+                alignment
                 team {
                     slug
                     abbreviation
@@ -215,11 +216,15 @@ export default function Game({ loaderData: { game } }: Route.ComponentProps) {
                 </table>
             </Section>
 
-            <Section title="Receiving">
+            <Section
+                title="Receiving"
+                hint="Pos = chart alignment, outside-in; S strong side, WK weak side"
+            >
                 <table className="data-table">
                     <thead>
                         <tr>
                             <th>Player</th>
+                            <th>Pos</th>
                             <th className="num">Tgt</th>
                             <th className="num">Rec</th>
                             <th className="num">Yds</th>
@@ -231,6 +236,7 @@ export default function Game({ loaderData: { game } }: Route.ComponentProps) {
                         {receivers.map((s) => (
                             <tr key={s.player + s.team.slug}>
                                 <Player s={s} />
+                                <td>{s.alignment ?? '—'}</td>
                                 <td className="num">{s.targets}</td>
                                 <td className="num">{s.receptions}</td>
                                 <td className="num">{s.receivingYards}</td>
