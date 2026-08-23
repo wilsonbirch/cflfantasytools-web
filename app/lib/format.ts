@@ -31,3 +31,21 @@ export function alignmentOrder(position: string) {
     const m = /^(\d+)(S|WK)$/.exec(position)
     return m ? (m[2] === 'S' ? 0 : 100) + Number(m[1]) : 1000
 }
+
+/** Fantasy points to one decimal. */
+export const fmtPts = (n: number | null | undefined) => (n == null ? '—' : n.toFixed(1))
+
+/** Game Zone salaries are whole dollars. */
+export const fmtSalary = (n: number | null | undefined) =>
+    n == null ? '—' : `$${n.toLocaleString('en-CA')}`
+
+/** Signed salary change; zero prints as a dash so the eye skips it. */
+export const fmtDelta = (n: number | null | undefined) =>
+    n == null || n === 0 ? '—' : `${n > 0 ? '+' : '−'}$${Math.abs(n).toLocaleString('en-CA')}`
+
+export const POSITION_LABEL: Record<string, string> = {
+    QUARTERBACK: 'QB',
+    RUNNING_BACK: 'RB',
+    WIDE_RECEIVER: 'WR',
+    OTHER: '—',
+}

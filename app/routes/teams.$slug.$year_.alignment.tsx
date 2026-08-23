@@ -8,6 +8,7 @@ const ALIGNMENT = graphql(`
     query TeamAlignment($teamSlug: String!, $year: Int!, $week: Int) {
         teamAlignment(teamSlug: $teamSlug, year: $year, week: $week) {
             week
+            weeks
             chart {
                 title
                 url
@@ -18,12 +19,6 @@ const ALIGNMENT = graphql(`
                 depth
                 player
                 jersey
-            }
-        }
-        depthChartLists(teamSlug: $teamSlug, year: $year) {
-            charts {
-                week
-                parseStatus
             }
         }
     }
@@ -38,20 +33,8 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     }
     const rawWeek = new URL(request.url).searchParams.get('week')
     const week = rawWeek && /^\d{1,2}$/.test(rawWeek) ? Number(rawWeek) : null
-    const { teamAlignment, depthChartLists } = await gqlAnonymous(ALIGNMENT, {
-        teamSlug: params.slug,
-        year,
-        week,
-    })
-    // No weeks field exists; the parsed charts are the weeks that have an alignment.
-    const weeks = [
-        ...new Set(
-            depthChartLists
-                .flatMap((l) => l.charts)
-                .filter((c) => c.parseStatus === 'OK' && c.week != null)
-                .map((c) => c.week as number),
-        ),
-    ].sort((a, b) => a - b)
+    const { teamAlignment } = await gqlAnonymous(ALIGNMENT, { teamSlug: params.slug, year, week })
+    const weeks = teamAlignment?.weeks ?? []
     const slots = new Map<string, Map<number, string>>()
     for (const p of teamAlignment?.positions ?? []) {
         if (!slots.has(p.position)) slots.set(p.position, new Map())
