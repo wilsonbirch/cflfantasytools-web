@@ -39,12 +39,44 @@ export type AuthPayload = {
   refreshToken: Scalars['String']['output'];
 };
 
+export enum CoachingRole {
+  Dc = 'DC',
+  Hc = 'HC',
+  Oc = 'OC'
+}
+
+/** One person in one role at one club. Hand-maintained; not in any feed. */
+export type CoachingStaff = {
+  __typename?: 'CoachingStaff';
+  effectiveFrom: Scalars['DateTime']['output'];
+  /** Null while current. */
+  effectiveTo?: Maybe<Scalars['DateTime']['output']>;
+  id: Scalars['Int']['output'];
+  person: Scalars['String']['output'];
+  role: CoachingRole;
+  team: Team;
+};
+
+export type CoachingStaffInput = {
+  effectiveFrom: Scalars['DateTime']['input'];
+  effectiveTo?: InputMaybe<Scalars['DateTime']['input']>;
+  person: Scalars['String']['input'];
+  role: CoachingRole;
+  teamSlug: Scalars['String']['input'];
+};
+
 /** One posted depth chart; `url` is the club's own PDF. */
 export type DepthChart = {
   __typename?: 'DepthChart';
   /** When the scraper first saw the chart. */
   detectedAt: Scalars['DateTime']['output'];
+  /** Archived copies of the PDF, newest first; one per distinct checksum. */
+  files: Array<DepthChartFile>;
   id: Scalars['Int']['output'];
+  /** Null until a parse has been attempted on an archived copy. */
+  parseStatus?: Maybe<DepthChartParseStatus>;
+  /** Receiver alignment read from the newest archived copy. Empty unless parseStatus is OK. */
+  positions: Array<DepthChartPosition>;
   publishedAt: Scalars['DateTime']['output'];
   season: Scalars['String']['output'];
   title: Scalars['String']['output'];
@@ -52,6 +84,19 @@ export type DepthChart = {
   uuid: Scalars['String']['output'];
   week: Scalars['Int']['output'];
   year: Scalars['Int']['output'];
+};
+
+/** An archived copy of a chart PDF. Bytes are served over REST, not GraphQL. */
+export type DepthChartFile = {
+  __typename?: 'DepthChartFile';
+  contentType: Scalars['String']['output'];
+  fetchedAt: Scalars['DateTime']['output'];
+  id: Scalars['Int']['output'];
+  sha256: Scalars['String']['output'];
+  /** Bytes. */
+  size: Scalars['Int']['output'];
+  /** Absolute URL on this API that streams the file: GET /depth-charts/files/{id}.pdf */
+  url: Scalars['String']['output'];
 };
 
 /** A team's depth charts for one season, newest chart first. */
@@ -63,6 +108,26 @@ export type DepthChartList = {
   updatedAt: Scalars['DateTime']['output'];
   uuid: Scalars['String']['output'];
   year: Scalars['Int']['output'];
+};
+
+/** OK: positions were read. UNSUPPORTED: this club's layout has no parser yet. FAILED: the parser ran and could not read the file. */
+export enum DepthChartParseStatus {
+  Failed = 'FAILED',
+  Ok = 'OK',
+  Unsupported = 'UNSUPPORTED'
+}
+
+/** One receiver slot on a chart. `position` counts OUTSIDE-IN: 1S is the widest receiver on the strong/field side, 2WK the second from the outside on the weak/boundary side. */
+export type DepthChartPosition = {
+  __typename?: 'DepthChartPosition';
+  /** 1 = starter, 2 = second string, 3 = third. */
+  depth: Scalars['Int']['output'];
+  /** Jersey number when the chart prints one. */
+  jersey?: Maybe<Scalars['Int']['output']>;
+  /** Name as printed on the chart. */
+  player: Scalars['String']['output'];
+  /** 1S, 2S, 3S, 1WK, 2WK, ... */
+  position: Scalars['String']['output'];
 };
 
 export type Drive = {
@@ -136,6 +201,8 @@ export enum JobStatus {
 
 export type Mutation = {
   __typename?: 'Mutation';
+  /** Admin only. Idempotent: deleting a missing row returns false. */
+  deleteCoachingStaff: Scalars['Boolean']['output'];
   /** Admin only. Unknown kinds are rejected with BAD_USER_INPUT. */
   enqueueJob: Job;
   /** Wrong email and wrong password fail identically. */
@@ -154,6 +221,13 @@ export type Mutation = {
   unsubscribeWithToken: Scalars['Boolean']['output'];
   /** Admin only. */
   updateTeamSource: TeamSource;
+  /** Admin only. Upserts on (team, role, person, effectiveFrom); co-coordinators are two rows. */
+  upsertCoachingStaff: CoachingStaff;
+};
+
+
+export type MutationDeleteCoachingStaffArgs = {
+  id: Scalars['Int']['input'];
 };
 
 
@@ -203,6 +277,11 @@ export type MutationUnsubscribeWithTokenArgs = {
 export type MutationUpdateTeamSourceArgs = {
   id: Scalars['Int']['input'];
   input: TeamSourceInput;
+};
+
+
+export type MutationUpsertCoachingStaffArgs = {
+  input: CoachingStaffInput;
 };
 
 export type NotificationSubscription = {
@@ -264,6 +343,8 @@ export type Play = {
 /** Per-player production in one game, from plays (no-plays excluded). */
 export type PlayerGameStats = {
   __typename?: 'PlayerGameStats';
+  /** Receiver position (1S, 2WK, ...) on the team's chart for that game's week; null when no parsed chart names the player. */
+  alignment?: Maybe<Scalars['String']['output']>;
   completions: Scalars['Int']['output'];
   epa: Scalars['Float']['output'];
   gameId: Scalars['Int']['output'];
@@ -296,6 +377,8 @@ export type PlayerSeasonStats = {
   passingYards: Scalars['Int']['output'];
   /** Name as it appears in the play text, e.g. "#12 A.Smith". */
   player: Scalars['String']['output'];
+  /** Most common receiver position across the season's parsed charts; null when no parsed chart names the player. */
+  primaryAlignment?: Maybe<Scalars['String']['output']>;
   receivingTouchdowns: Scalars['Int']['output'];
   receivingYards: Scalars['Int']['output'];
   receptions: Scalars['Int']['output'];
@@ -331,6 +414,8 @@ export type Query = {
   /** Every year with a game or a fixture, newest first. */
   seasons: Array<Scalars['Int']['output']>;
   team?: Maybe<Team>;
+  /** The newest parsed chart for the team's week (or the season's newest when week is omitted); null when none has parsed OK. */
+  teamAlignment?: Maybe<TeamAlignment>;
   /** Admin only. */
   teamSources: Array<TeamSource>;
   teams: Array<Team>;
@@ -386,6 +471,13 @@ export type QueryTeamArgs = {
   slug: Scalars['String']['input'];
 };
 
+
+export type QueryTeamAlignmentArgs = {
+  teamSlug: Scalars['String']['input'];
+  week?: InputMaybe<Scalars['Int']['input']>;
+  year: Scalars['Int']['input'];
+};
+
 export enum Role {
   Admin = 'ADMIN',
   User = 'USER'
@@ -404,6 +496,8 @@ export type ScrapeRun = {
   finishedAt?: Maybe<Scalars['DateTime']['output']>;
   id: Scalars['Int']['output'];
   itemCount?: Maybe<Scalars['Int']['output']>;
+  /** Charts whose PDF changed under an unchanged link this run. */
+  revisedCount?: Maybe<Scalars['Int']['output']>;
   startedAt: Scalars['DateTime']['output'];
   status: ScrapeStatus;
   team: Team;
@@ -419,6 +513,8 @@ export type Team = {
   __typename?: 'Team';
   abbreviation: Scalars['String']['output'];
   city?: Maybe<Scalars['String']['output']>;
+  /** Staff in post at any point during the season; every row when year is omitted. */
+  coachingStaff: Array<CoachingStaff>;
   id: Scalars['Int']['output'];
   isActive: Scalars['Boolean']['output'];
   name: Scalars['String']['output'];
@@ -426,6 +522,21 @@ export type Team = {
   shortName?: Maybe<Scalars['String']['output']>;
   slug: Scalars['String']['output'];
   uuid: Scalars['String']['output'];
+};
+
+
+export type TeamCoachingStaffArgs = {
+  year?: InputMaybe<Scalars['Int']['input']>;
+};
+
+/** A team's receiver alignment as of one chart. */
+export type TeamAlignment = {
+  __typename?: 'TeamAlignment';
+  chart: DepthChart;
+  positions: Array<DepthChartPosition>;
+  team: Team;
+  week: Scalars['Int']['output'];
+  year: Scalars['Int']['output'];
 };
 
 /** One team's totals in a game, from plays (no-plays excluded). */
@@ -577,7 +688,7 @@ export type DepthChartListsQueryVariables = Exact<{
 }>;
 
 
-export type DepthChartListsQuery = { __typename?: 'Query', depthChartLists: Array<{ __typename?: 'DepthChartList', year: number, updatedAt: string, charts: Array<{ __typename?: 'DepthChart', id: number, title: string, url: string, season: string, week: number, publishedAt: string, detectedAt: string }> }> };
+export type DepthChartListsQuery = { __typename?: 'Query', depthChartLists: Array<{ __typename?: 'DepthChartList', year: number, updatedAt: string, charts: Array<{ __typename?: 'DepthChart', id: number, title: string, url: string, season: string, week: number, publishedAt: string, detectedAt: string, parseStatus?: DepthChartParseStatus | null, files: Array<{ __typename?: 'DepthChartFile', id: number, sha256: string, size: number, fetchedAt: string, url: string }> }> }> };
 
 export type TeamQueryVariables = Exact<{
   slug: Scalars['String']['input'];
@@ -631,7 +742,7 @@ export const LogoutDocument = {"kind":"Document","definitions":[{"kind":"Operati
 export const RegisterDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"Register"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"email"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"password"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"register"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"email"},"value":{"kind":"Variable","name":{"kind":"Name","value":"email"}}},{"kind":"Argument","name":{"kind":"Name","value":"password"},"value":{"kind":"Variable","name":{"kind":"Name","value":"password"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"accessToken"}},{"kind":"Field","name":{"kind":"Name","value":"refreshToken"}},{"kind":"Field","name":{"kind":"Name","value":"accessTokenExpiresAt"}}]}}]}}]} as unknown as DocumentNode<RegisterMutation, RegisterMutationVariables>;
 export const SeasonStatsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"SeasonStats"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"year"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"teamSlug"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"seasons"}},{"kind":"Field","name":{"kind":"Name","value":"teams"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"slug"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"abbreviation"}}]}},{"kind":"Field","name":{"kind":"Name","value":"playerSeasonStats"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"year"},"value":{"kind":"Variable","name":{"kind":"Name","value":"year"}}},{"kind":"Argument","name":{"kind":"Name","value":"teamSlug"},"value":{"kind":"Variable","name":{"kind":"Name","value":"teamSlug"}}},{"kind":"Argument","name":{"kind":"Name","value":"limit"},"value":{"kind":"IntValue","value":"200"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"player"}},{"kind":"Field","name":{"kind":"Name","value":"team"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"slug"}},{"kind":"Field","name":{"kind":"Name","value":"abbreviation"}}]}},{"kind":"Field","name":{"kind":"Name","value":"games"}},{"kind":"Field","name":{"kind":"Name","value":"passAttempts"}},{"kind":"Field","name":{"kind":"Name","value":"completions"}},{"kind":"Field","name":{"kind":"Name","value":"passingYards"}},{"kind":"Field","name":{"kind":"Name","value":"passingTouchdowns"}},{"kind":"Field","name":{"kind":"Name","value":"interceptions"}},{"kind":"Field","name":{"kind":"Name","value":"rushAttempts"}},{"kind":"Field","name":{"kind":"Name","value":"rushingYards"}},{"kind":"Field","name":{"kind":"Name","value":"rushingTouchdowns"}},{"kind":"Field","name":{"kind":"Name","value":"targets"}},{"kind":"Field","name":{"kind":"Name","value":"receptions"}},{"kind":"Field","name":{"kind":"Name","value":"receivingYards"}},{"kind":"Field","name":{"kind":"Name","value":"receivingTouchdowns"}},{"kind":"Field","name":{"kind":"Name","value":"epa"}}]}}]}}]} as unknown as DocumentNode<SeasonStatsQuery, SeasonStatsQueryVariables>;
 export const JobHealthDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"JobHealth"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"jobHealth"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"kind"}},{"kind":"Field","name":{"kind":"Name","value":"ageMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"expectedEveryMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"isStale"}},{"kind":"Field","name":{"kind":"Name","value":"lastSuccessAt"}}]}}]}}]} as unknown as DocumentNode<JobHealthQuery, JobHealthQueryVariables>;
-export const DepthChartListsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"DepthChartLists"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"teamSlug"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"year"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"depthChartLists"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"teamSlug"},"value":{"kind":"Variable","name":{"kind":"Name","value":"teamSlug"}}},{"kind":"Argument","name":{"kind":"Name","value":"year"},"value":{"kind":"Variable","name":{"kind":"Name","value":"year"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"year"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"charts"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"title"}},{"kind":"Field","name":{"kind":"Name","value":"url"}},{"kind":"Field","name":{"kind":"Name","value":"season"}},{"kind":"Field","name":{"kind":"Name","value":"week"}},{"kind":"Field","name":{"kind":"Name","value":"publishedAt"}},{"kind":"Field","name":{"kind":"Name","value":"detectedAt"}}]}}]}}]}}]} as unknown as DocumentNode<DepthChartListsQuery, DepthChartListsQueryVariables>;
+export const DepthChartListsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"DepthChartLists"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"teamSlug"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"year"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"depthChartLists"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"teamSlug"},"value":{"kind":"Variable","name":{"kind":"Name","value":"teamSlug"}}},{"kind":"Argument","name":{"kind":"Name","value":"year"},"value":{"kind":"Variable","name":{"kind":"Name","value":"year"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"year"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"charts"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"title"}},{"kind":"Field","name":{"kind":"Name","value":"url"}},{"kind":"Field","name":{"kind":"Name","value":"season"}},{"kind":"Field","name":{"kind":"Name","value":"week"}},{"kind":"Field","name":{"kind":"Name","value":"publishedAt"}},{"kind":"Field","name":{"kind":"Name","value":"detectedAt"}},{"kind":"Field","name":{"kind":"Name","value":"parseStatus"}},{"kind":"Field","name":{"kind":"Name","value":"files"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"sha256"}},{"kind":"Field","name":{"kind":"Name","value":"size"}},{"kind":"Field","name":{"kind":"Name","value":"fetchedAt"}},{"kind":"Field","name":{"kind":"Name","value":"url"}}]}}]}}]}}]}}]} as unknown as DocumentNode<DepthChartListsQuery, DepthChartListsQueryVariables>;
 export const TeamDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"Team"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"slug"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"team"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"slug"},"value":{"kind":"Variable","name":{"kind":"Name","value":"slug"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"slug"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"abbreviation"}}]}},{"kind":"Field","name":{"kind":"Name","value":"depthChartYears"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"teamSlug"},"value":{"kind":"Variable","name":{"kind":"Name","value":"slug"}}}]}]}}]} as unknown as DocumentNode<TeamQuery, TeamQueryVariables>;
 export const MySubscriptionsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"MySubscriptions"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"mySubscriptions"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"enabled"}},{"kind":"Field","name":{"kind":"Name","value":"team"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"slug"}}]}}]}}]}}]} as unknown as DocumentNode<MySubscriptionsQuery, MySubscriptionsQueryVariables>;
 export const SubscribeDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"Subscribe"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"teamSlug"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"subscribe"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"teamSlug"},"value":{"kind":"Variable","name":{"kind":"Name","value":"teamSlug"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"enabled"}}]}}]}}]} as unknown as DocumentNode<SubscribeMutation, SubscribeMutationVariables>;

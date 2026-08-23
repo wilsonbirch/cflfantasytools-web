@@ -1,3 +1,4 @@
+import { Chip } from '@heroui/react'
 import { data, Link } from 'react-router'
 import type { Route } from './+types/teams.$slug.$year'
 import { graphql } from '~/graphql/generated'
@@ -16,6 +17,14 @@ const CHARTS = graphql(`
                 week
                 publishedAt
                 detectedAt
+                parseStatus
+                files {
+                    id
+                    sha256
+                    size
+                    fetchedAt
+                    url
+                }
             }
         }
     }
@@ -31,6 +40,8 @@ export async function loader({ params }: Route.LoaderArgs) {
 }
 
 const fmt = (iso: string) => new Date(iso).toISOString().slice(0, 10)
+const fmtKb = (bytes: number) => `${Math.max(1, Math.round(bytes / 1024))} KB`
+const statusColor = (s: string) => (s === 'OK' ? 'success' : s === 'FAILED' ? 'danger' : 'default')
 
 export default function TeamYear({ loaderData: { year, charts }, params }: Route.ComponentProps) {
     return (
@@ -53,6 +64,8 @@ export default function TeamYear({ loaderData: { year, charts }, params }: Route
                                 <th className="num">Week</th>
                                 <th>Published</th>
                                 <th>Detected</th>
+                                <th>Parse</th>
+                                <th>Archived copies</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -72,6 +85,44 @@ export default function TeamYear({ loaderData: { year, charts }, params }: Route
                                     <td className="num">{c.week}</td>
                                     <td>{fmt(c.publishedAt)}</td>
                                     <td>{fmt(c.detectedAt)}</td>
+                                    <td>
+                                        {c.parseStatus ? (
+                                            <Chip size="sm" color={statusColor(c.parseStatus)}>
+                                                {c.parseStatus}
+                                            </Chip>
+                                        ) : (
+                                            <span className="text-default-500">—</span>
+                                        )}
+                                    </td>
+                                    <td>
+                                        {c.files.length === 0 ? (
+                                            <span className="text-default-500">—</span>
+                                        ) : (
+                                            <ul className="flex flex-col gap-0.5 text-xs">
+                                                {c.files.map((f) => (
+                                                    <li key={f.id}>
+                                                        <a
+                                                            href={f.url}
+                                                            className="underline"
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                        >
+                                                            {fmt(f.fetchedAt)}
+                                                        </a>{' '}
+                                                        <span className="text-default-500">
+                                                            {fmtKb(f.size)} ·{' '}
+                                                            <code>{f.sha256.slice(0, 8)}</code>
+                                                        </span>
+                                                    </li>
+                                                ))}
+                                                {c.files.length > 1 && (
+                                                    <li className="text-warning">
+                                                        Replaced at same URL
+                                                    </li>
+                                                )}
+                                            </ul>
+                                        )}
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
