@@ -1,5 +1,6 @@
 import { data, NavLink, Outlet } from 'react-router'
 import type { Route } from './+types/admin'
+import { PageHeader } from '~/components/PageHeader'
 import { requireAdmin } from '~/lib/auth.server'
 
 export const meta: Route.MetaFunction = () => [{ title: 'Admin — 3 Down Fantasy' }]
@@ -16,7 +17,7 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
 export default function Admin() {
     return (
         <div className="flex flex-col gap-4">
-            <h1 className="text-2xl font-semibold">Admin</h1>
+            <PageHeader title="Admin" />
             <nav aria-label="Admin" className="flex gap-2 border-b border-default-200 pb-2">
                 <NavLink to="/admin" end className={linkClass}>
                     Scrapers

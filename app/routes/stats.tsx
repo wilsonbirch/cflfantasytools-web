@@ -1,5 +1,6 @@
-import { Link } from 'react-router'
 import type { Route } from './+types/stats'
+import { type Column, DataTable } from '~/components/DataTable'
+import { PageHeader } from '~/components/PageHeader'
 import { SeasonFilter } from '~/components/SeasonFilter'
 import { graphql } from '~/graphql/generated'
 import { fmtEpa, parseYear } from '~/lib/format'
@@ -41,20 +42,20 @@ const SEASON_STATS = graphql(`
 `)
 
 const COLUMNS = [
-    ['games', 'G'],
-    ['passAttempts', 'Att'],
-    ['completions', 'Cmp'],
-    ['passingYards', 'Pass yds'],
-    ['passingTouchdowns', 'Pass TD'],
-    ['interceptions', 'INT'],
-    ['rushAttempts', 'Rush'],
-    ['rushingYards', 'Rush yds'],
-    ['rushingTouchdowns', 'Rush TD'],
-    ['targets', 'Tgt'],
-    ['receptions', 'Rec'],
-    ['receivingYards', 'Rec yds'],
-    ['receivingTouchdowns', 'Rec TD'],
-    ['epa', 'EPA'],
+    ['games', 'G', 'Games'],
+    ['passAttempts', 'Att', 'Pass attempts'],
+    ['completions', 'Cmp', 'Completions'],
+    ['passingYards', 'Pass yds', 'Passing yards'],
+    ['passingTouchdowns', 'Pass TD', 'Passing touchdowns'],
+    ['interceptions', 'INT', 'Interceptions'],
+    ['rushAttempts', 'Rush', 'Rush attempts'],
+    ['rushingYards', 'Rush yds', 'Rushing yards'],
+    ['rushingTouchdowns', 'Rush TD', 'Rushing touchdowns'],
+    ['targets', 'Tgt', 'Targets'],
+    ['receptions', 'Rec', 'Receptions'],
+    ['receivingYards', 'Rec yds', 'Receiving yards'],
+    ['receivingTouchdowns', 'Rec TD', 'Receiving touchdowns'],
+    ['epa', 'EPA', 'Expected points added'],
 ] as const
 type SortKey = (typeof COLUMNS)[number][0]
 const isSortKey = (k: string | null): k is SortKey => COLUMNS.some(([c]) => c === k)
@@ -74,60 +75,52 @@ export async function loader({ request }: Route.LoaderArgs) {
     return { year, team, sort, seasons, teams, rows }
 }
 
+type Row = Route.ComponentProps['loaderData']['rows'][number]
+
+const columns: Column<Row>[] = [
+    {
+        key: 'player',
+        label: 'Player',
+        cellClass: (s) => `team-${s.team.slug}`,
+        cell: (s) => (
+            <>
+                {s.player} <span className="team-link text-xs">{s.team.abbreviation}</span>
+            </>
+        ),
+    },
+    {
+        key: 'pos',
+        label: 'Pos',
+        title: 'Most common chart alignment, outside-in; S strong side, WK weak side',
+        cell: (s) => s.primaryAlignment ?? '—',
+    },
+    ...COLUMNS.map(([key, label, title]): Column<Row> => ({
+        key,
+        label,
+        title,
+        num: true,
+        sortable: true,
+        cell: (s) => (key === 'epa' ? fmtEpa(s.epa) : s[key]),
+    })),
+]
+
 export default function Stats({
     loaderData: { year, team, sort, seasons, teams, rows },
 }: Route.ComponentProps) {
-    const href = (key: SortKey) => `?year=${year}&team=${team}&sort=${key}`
     return (
         <div className="flex flex-col gap-4">
-            <h1 className="text-2xl font-semibold">Season leaders</h1>
+            <PageHeader title="Season leaders" context={year}>
+                Per-player production from parsed play-by-play; EPA is era-scoped.
+            </PageHeader>
             <SeasonFilter year={year} seasons={seasons} team={team} teams={teams} />
-            {rows.length === 0 ? (
-                <p className="text-default-500">No parsed games for {year}.</p>
-            ) : (
-                <div className="table-wrap">
-                    <table className="data-table">
-                        <thead>
-                            <tr>
-                                <th>Player</th>
-                                <th title="Most common chart alignment, outside-in; S strong side, WK weak side">
-                                    Pos
-                                </th>
-                                {COLUMNS.map(([key, label]) => (
-                                    <th
-                                        key={key}
-                                        className="num"
-                                        aria-sort={sort === key ? 'descending' : undefined}
-                                    >
-                                        <Link to={href(key)} className="hover:underline">
-                                            {label}
-                                            {sort === key ? ' ↓' : ''}
-                                        </Link>
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {rows.map((s) => (
-                                <tr key={s.player + s.team.slug}>
-                                    <td className={`team-${s.team.slug}`}>
-                                        {s.player}{' '}
-                                        <span className="team-link text-xs">
-                                            {s.team.abbreviation}
-                                        </span>
-                                    </td>
-                                    <td>{s.primaryAlignment ?? '—'}</td>
-                                    {COLUMNS.map(([key]) => (
-                                        <td key={key} className="num">
-                                            {key === 'epa' ? fmtEpa(s.epa) : s[key]}
-                                        </td>
-                                    ))}
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
+            <DataTable
+                caption={`${year} season leaders`}
+                columns={columns}
+                rows={rows}
+                rowKey={(s) => s.player + s.team.slug}
+                sort={{ key: sort, href: (key) => `?year=${year}&team=${team}&sort=${key}` }}
+                empty={`No parsed games for ${year}.`}
+            />
         </div>
     )
 }

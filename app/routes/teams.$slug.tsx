@@ -1,6 +1,7 @@
 import { Button } from '@heroui/react'
 import { data, Form, Outlet, redirect } from 'react-router'
 import type { Route } from './+types/teams.$slug'
+import { PageHeader } from '~/components/PageHeader'
 import { graphql } from '~/graphql/generated'
 import { gqlAnonymous, gqlAsViewer } from '~/lib/gql.server'
 import { hasSession } from '~/lib/session.server'
@@ -89,35 +90,35 @@ export default function Team({
 }: Route.ComponentProps) {
     return (
         <div className={`team-${team.slug} flex flex-col gap-4`}>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-                <h1 className="text-2xl font-semibold">
-                    <span className="team-link">{team.name}</span>{' '}
-                    <span className="text-default-500">{team.abbreviation}</span>
-                </h1>
-                {signedIn ? (
-                    <Form method="post">
-                        <input
-                            type="hidden"
-                            name="intent"
-                            value={subscribed ? 'unsubscribe' : 'subscribe'}
-                        />
-                        <Button
-                            type="submit"
-                            variant={subscribed ? 'secondary' : 'primary'}
-                            size="sm"
+            <PageHeader
+                title={<span className="team-link">{team.name}</span>}
+                context={team.abbreviation}
+                actions={
+                    signedIn ? (
+                        <Form method="post">
+                            <input
+                                type="hidden"
+                                name="intent"
+                                value={subscribed ? 'unsubscribe' : 'subscribe'}
+                            />
+                            <Button
+                                type="submit"
+                                variant={subscribed ? 'secondary' : 'primary'}
+                                size="sm"
+                            >
+                                {subscribed ? 'Unsubscribe from updates' : 'Subscribe to updates'}
+                            </Button>
+                        </Form>
+                    ) : (
+                        <a
+                            href={`/login?redirectTo=${encodeURIComponent(`/teams/${params.slug}`)}`}
+                            className="text-sm underline"
                         >
-                            {subscribed ? 'Unsubscribe from updates' : 'Subscribe to updates'}
-                        </Button>
-                    </Form>
-                ) : (
-                    <a
-                        href={`/login?redirectTo=${encodeURIComponent(`/teams/${params.slug}`)}`}
-                        className="text-sm underline"
-                    >
-                        Log in to get depth chart emails
-                    </a>
-                )}
-            </div>
+                            Log in to get depth chart emails
+                        </a>
+                    )
+                }
+            />
             <Outlet />
         </div>
     )

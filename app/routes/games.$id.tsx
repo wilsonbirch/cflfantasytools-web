@@ -1,5 +1,6 @@
 import { data, Link } from 'react-router'
 import type { Route } from './+types/games.$id'
+import { PageHeader } from '~/components/PageHeader'
 import { graphql } from '~/graphql/generated'
 import { fmtDate, fmtEpa, ZONES, zoneLabel } from '~/lib/format'
 import { gqlAnonymous } from '~/lib/gql.server'
@@ -108,18 +109,22 @@ export default function Game({ loaderData: { game } }: Route.ComponentProps) {
                     {game.year} games
                 </Link>
             </p>
-            <h1 className="text-2xl font-semibold">
-                <span className={`team-${game.awayTeam?.slug}`}>
-                    <span className="team-link">{game.awayTeam?.name ?? '?'}</span> {game.awayScore}
-                </span>{' '}
-                <span className="text-default-500">@</span>{' '}
-                <span className={`team-${game.homeTeam?.slug}`}>
-                    <span className="team-link">{game.homeTeam?.name ?? '?'}</span> {game.homeScore}
-                </span>
-                <span className="ml-3 text-base font-normal text-default-500">
-                    {fmtDate(game.date)}
-                </span>
-            </h1>
+            <PageHeader
+                title={
+                    <>
+                        <span className={`team-${game.awayTeam?.slug}`}>
+                            <span className="team-link">{game.awayTeam?.name ?? '?'}</span>{' '}
+                            {game.awayScore}
+                        </span>{' '}
+                        <span className="text-default-500">@</span>{' '}
+                        <span className={`team-${game.homeTeam?.slug}`}>
+                            <span className="team-link">{game.homeTeam?.name ?? '?'}</span>{' '}
+                            {game.homeScore}
+                        </span>
+                    </>
+                }
+                context={`${game.year} · ${fmtDate(game.date)}`}
+            />
 
             <Section title="Box score">
                 <table className="data-table">

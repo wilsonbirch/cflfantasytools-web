@@ -30,10 +30,20 @@ body {
 }
 
 /* Plain tables: the stats surfaces are read-only and SSR-rendered, so native
-   <table> beats a client-side grid. Wrap in .table-wrap for small screens. */
+   <table> beats a client-side grid. .table-wrap scrolls both ways so the
+   sticky header stays put on long leaderboards (sticky needs a scroll
+   container; the page itself is not one once overflow-x is set). */
 .table-wrap {
-    overflow-x: auto;
+    overflow: auto;
+    max-height: 85vh;
     -webkit-overflow-scrolling: touch;
+}
+
+.data-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--background, #111);
 }
 
 .data-table {
@@ -63,4 +73,59 @@ body {
 
 .data-table tbody tr:hover {
     background: hsl(var(--heroui-default-100, 0 0% 50%) / 0.3);
+}
+
+/* Stat tiles: a row of headline numbers above a table. */
+.stat-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+    gap: 0.5rem;
+}
+
+.stat-tile {
+    display: flex;
+    flex-direction: column;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid hsl(var(--heroui-default-200, 0 0% 50%) / 0.4);
+    border-radius: 0.375rem;
+    background: var(--surface, transparent);
+}
+
+.stat-tile__label {
+    font-size: 0.75rem;
+    color: hsl(var(--heroui-default-500, 0 0% 60%));
+}
+
+.stat-tile__value {
+    font-size: 1.25rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.stat-tile__hint {
+    font-size: 0.75rem;
+    color: hsl(var(--heroui-default-500, 0 0% 60%));
+}
+
+/* Route-transition bar: the only loading state SSR pages need. */
+.nav-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 2px;
+    width: 100%;
+    background: var(--color-accent);
+    animation: nav-progress 1s ease-in-out infinite alternate;
+    z-index: 60;
+}
+
+@keyframes nav-progress {
+    from {
+        transform: scaleX(0.2);
+        transform-origin: left;
+    }
+    to {
+        transform: scaleX(1);
+        transform-origin: left;
+    }
 }

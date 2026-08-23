@@ -1,5 +1,7 @@
 import { Link } from 'react-router'
 import type { Route } from './+types/games._index'
+import { type Column, DataTable } from '~/components/DataTable'
+import { PageHeader } from '~/components/PageHeader'
 import { SeasonFilter } from '~/components/SeasonFilter'
 import { graphql } from '~/graphql/generated'
 import { fmtDate, parseYear } from '~/lib/format'
@@ -40,55 +42,53 @@ export async function loader({ request }: Route.LoaderArgs) {
     return { year, team, seasons, teams, games }
 }
 
+type Game = Route.ComponentProps['loaderData']['games'][number]
+
+const columns: Column<Game>[] = [
+    { key: 'date', label: 'Date', cell: (g) => fmtDate(g.date) },
+    {
+        key: 'away',
+        label: 'Away',
+        cellClass: (g) => `team-${g.awayTeam?.slug}`,
+        cell: (g) => <span className="team-link">{g.awayTeam?.abbreviation ?? '?'}</span>,
+    },
+    {
+        key: 'home',
+        label: 'Home',
+        cellClass: (g) => `team-${g.homeTeam?.slug}`,
+        cell: (g) => <span className="team-link">{g.homeTeam?.abbreviation ?? '?'}</span>,
+    },
+    {
+        key: 'score',
+        label: 'Score',
+        num: true,
+        cell: (g) => `${g.awayScore ?? '–'}–${g.homeScore ?? '–'}`,
+    },
+    {
+        key: 'box',
+        label: '',
+        cell: (g) => (
+            <Link to={`/games/${g.id}`} className="underline">
+                Box score
+            </Link>
+        ),
+    },
+]
+
 export default function Games({
     loaderData: { year, team, seasons, teams, games },
 }: Route.ComponentProps) {
     return (
         <div className="flex flex-col gap-4">
-            <h1 className="text-2xl font-semibold">Games</h1>
+            <PageHeader title="Games" context={year} />
             <SeasonFilter year={year} seasons={seasons} team={team} teams={teams} />
-            {games.length === 0 ? (
-                <p className="text-default-500">No parsed games for {year}.</p>
-            ) : (
-                <div className="table-wrap">
-                    <table className="data-table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Away</th>
-                                <th>Home</th>
-                                <th className="num">Score</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {games.map((g) => (
-                                <tr key={g.id}>
-                                    <td>{fmtDate(g.date)}</td>
-                                    <td className={`team-${g.awayTeam?.slug}`}>
-                                        <span className="team-link">
-                                            {g.awayTeam?.abbreviation ?? '?'}
-                                        </span>
-                                    </td>
-                                    <td className={`team-${g.homeTeam?.slug}`}>
-                                        <span className="team-link">
-                                            {g.homeTeam?.abbreviation ?? '?'}
-                                        </span>
-                                    </td>
-                                    <td className="num">
-                                        {g.awayScore ?? '–'}–{g.homeScore ?? '–'}
-                                    </td>
-                                    <td>
-                                        <Link to={`/games/${g.id}`} className="underline">
-                                            Box score
-                                        </Link>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
+            <DataTable
+                caption={`${year} games`}
+                columns={columns}
+                rows={games}
+                rowKey={(g) => g.id}
+                empty={`No parsed games for ${year}.`}
+            />
         </div>
     )
 }

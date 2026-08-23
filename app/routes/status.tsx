@@ -1,5 +1,8 @@
 import { Chip } from '@heroui/react'
 import type { Route } from './+types/status'
+import { type Column, DataTable } from '~/components/DataTable'
+import { PageHeader } from '~/components/PageHeader'
+import { StatTile } from '~/components/StatTile'
 import { graphql } from '~/graphql/generated'
 import { gqlAnonymous } from '~/lib/gql.server'
 
@@ -22,48 +25,54 @@ export async function loader() {
     return { jobs: jobHealth }
 }
 
+type Job = Route.ComponentProps['loaderData']['jobs'][number]
+
+const columns: Column<Job>[] = [
+    { key: 'kind', label: 'Job', cell: (j) => j.kind },
+    {
+        key: 'state',
+        label: 'State',
+        cell: (j) => (
+            <Chip size="sm" color={j.isStale ? 'danger' : 'success'}>
+                {j.isStale ? 'Stale' : 'Fresh'}
+            </Chip>
+        ),
+    },
+    { key: 'age', label: 'Age (min)', num: true, cell: (j) => j.ageMinutes ?? '—' },
+    { key: 'every', label: 'Expected every (min)', num: true, cell: (j) => j.expectedEveryMinutes },
+    {
+        key: 'last',
+        label: 'Last success (UTC)',
+        cell: (j) => (j.lastSuccessAt ? j.lastSuccessAt.replace('T', ' ').slice(0, 16) : 'never'),
+    },
+]
+
 export default function Status({ loaderData: { jobs } }: Route.ComponentProps) {
     const stale = jobs.filter((j) => j.isStale).length
     return (
         <div className="flex flex-col gap-4">
-            <h1 className="text-2xl font-semibold">Status</h1>
-            <p className="text-default-500">
+            <PageHeader title="Status">
                 {stale === 0
                     ? 'All scheduled jobs are fresh.'
                     : `${stale} stale job${stale === 1 ? '' : 's'}.`}
-            </p>
-            <div className="table-wrap">
-                <table className="data-table">
-                    <thead>
-                        <tr>
-                            <th>Job</th>
-                            <th>State</th>
-                            <th className="num">Age (min)</th>
-                            <th className="num">Expected every (min)</th>
-                            <th>Last success (UTC)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {jobs.map((j) => (
-                            <tr key={j.kind} className={j.isStale ? 'bg-danger/10' : ''}>
-                                <td>{j.kind}</td>
-                                <td>
-                                    <Chip size="sm" color={j.isStale ? 'danger' : 'success'}>
-                                        {j.isStale ? 'Stale' : 'Fresh'}
-                                    </Chip>
-                                </td>
-                                <td className="num">{j.ageMinutes ?? '—'}</td>
-                                <td className="num">{j.expectedEveryMinutes}</td>
-                                <td>
-                                    {j.lastSuccessAt
-                                        ? j.lastSuccessAt.replace('T', ' ').slice(0, 16)
-                                        : 'never'}
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+            </PageHeader>
+            <div className="stat-tiles">
+                <StatTile label="Scheduled jobs" value={jobs.length} />
+                <StatTile
+                    label="Stale"
+                    value={stale}
+                    hint="never succeeded, or over twice its interval"
+                    className={stale > 0 ? 'text-danger' : undefined}
+                />
             </div>
+            <DataTable
+                caption="Scheduled job health"
+                columns={columns}
+                rows={jobs}
+                rowKey={(j) => j.kind}
+                rowClass={(j) => (j.isStale ? 'bg-danger/10' : undefined)}
+                empty="No scheduled jobs reported."
+            />
         </div>
     )
 }

@@ -1,5 +1,6 @@
 import { Link } from 'react-router'
 import type { Route } from './+types/teams._index'
+import { PageHeader } from '~/components/PageHeader'
 import { graphql } from '~/graphql/generated'
 import { gqlAnonymous } from '~/lib/gql.server'
 
@@ -24,7 +25,9 @@ export async function loader() {
 export default function Teams({ loaderData: { teams } }: Route.ComponentProps) {
     return (
         <div className="flex flex-col gap-4">
-            <h1 className="text-2xl font-semibold">Depth charts</h1>
+            <PageHeader title="Depth charts">
+                Pick a club for its depth charts, receiver alignment and coaching staff by season.
+            </PageHeader>
             <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {teams.map((team) => (
                     <li key={team.slug} className={`team-${team.slug}`}>
