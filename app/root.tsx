@@ -9,6 +9,7 @@ import {
     Outlet,
     Scripts,
     ScrollRestoration,
+    useNavigation,
     useRouteLoaderData,
 } from 'react-router'
 import type { Route } from './+types/root'
@@ -54,6 +55,9 @@ function Nav() {
                 <NavLink to="/stats" className={navLinkClass}>
                     Stats
                 </NavLink>
+                <NavLink to="/fantasy" className={navLinkClass}>
+                    Fantasy
+                </NavLink>
                 {viewer?.role === 'ADMIN' && (
                     <NavLink to="/admin" className={navLinkClass}>
                         Admin
@@ -82,6 +86,13 @@ function Nav() {
     )
 }
 
+/** Thin top bar while a navigation is in flight — the only loading state SSR pages need. */
+function NavProgress() {
+    const navigation = useNavigation()
+    if (navigation.state === 'idle') return null
+    return <div className="nav-progress" role="status" aria-label="Loading" />
+}
+
 export function Layout({ children }: { children: React.ReactNode }) {
     return (
         <html lang="en" className="dark">
@@ -92,6 +103,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <Links />
             </head>
             <body className="bg-grain min-h-screen">
+                <NavProgress />
                 <Nav />
                 <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
                 <ScrollRestoration />

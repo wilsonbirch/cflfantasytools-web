@@ -28,6 +28,9 @@ export default function Index() {
                 <Link to="/stats" className="underline">
                     Stats
                 </Link>
+                <Link to="/fantasy" className="underline">
+                    Fantasy
+                </Link>
             </nav>
         </div>
     )
