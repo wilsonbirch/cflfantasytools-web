@@ -38,8 +38,8 @@
     },
     "devDependencies": {
         "@eslint/js": "^9.39.4",
-        "@graphql-codegen/cli": "^5.0.7",
-        "@graphql-codegen/client-preset": "^4.8.3",
+        "@graphql-codegen/cli": "^8.0.0",
+        "@graphql-codegen/client-preset": "^7.0.0",
         "@playwright/test": "^1.48.0",
         "@react-router/dev": "^7.0.0",
         "@react-router/fs-routes": "^7.0.0",

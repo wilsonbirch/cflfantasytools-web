@@ -20,6 +20,10 @@ const config: CodegenConfig = {
                 scalars: { DateTime: 'string', JSON: 'unknown' },
                 // Required under verbatimModuleSyntax, which tsconfig enables.
                 useTypeImports: true,
+                // Routes read enums at runtime (Object.values(JobStatus) etc.).
+                // client-preset 6+ defaults to string-literal unions, which have
+                // no runtime value, so keep the native TS enums we had before.
+                enumType: 'native',
             },
         },
     },
