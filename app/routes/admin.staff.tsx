@@ -46,8 +46,8 @@ const RANK = { HC: 0, OC: 1, DC: 2 }
 const toDateTime = (v: FormDataEntryValue | null) =>
     typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? `${v}T00:00:00.000Z` : null
 
-export async function loader({ request }: Route.LoaderArgs) {
-    await requireAdmin(request)
+export async function loader({ request, url }: Route.LoaderArgs) {
+    await requireAdmin(request, url)
     const { data: d, headers } = await gqlAsViewer(request, STAFF)
     const rows = d.teams
         .flatMap((t) => t.coachingStaff.map((s) => ({ ...s, team: t })))
@@ -60,8 +60,8 @@ export async function loader({ request }: Route.LoaderArgs) {
     return data({ teams: d.teams, rows }, { headers })
 }
 
-export async function action({ request }: Route.ActionArgs) {
-    await requireAdmin(request)
+export async function action({ request, url }: Route.ActionArgs) {
+    await requireAdmin(request, url)
     const form = await request.formData()
     const intent = form.get('intent')
 
