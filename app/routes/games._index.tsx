@@ -34,8 +34,7 @@ const GAMES = graphql(`
     }
 `)
 
-export async function loader({ request }: Route.LoaderArgs) {
-    const url = new URL(request.url)
+export async function loader({ url }: Route.LoaderArgs) {
     const year = parseYear(url.searchParams.get('year'))
     const team = url.searchParams.get('team') ?? ''
     const { seasons, teams, games } = await gqlAnonymous(GAMES, { year, teamSlug: team || null })

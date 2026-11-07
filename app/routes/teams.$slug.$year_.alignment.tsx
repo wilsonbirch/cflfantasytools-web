@@ -26,12 +26,12 @@ const ALIGNMENT = graphql(`
 
 const DEPTHS = [1, 2, 3]
 
-export async function loader({ request, params }: Route.LoaderArgs) {
+export async function loader({ url, params }: Route.LoaderArgs) {
     const year = Number(params.year)
     if (!Number.isInteger(year) || year < 2000 || year > 2100) {
         throw data('Bad year', { status: 400 })
     }
-    const rawWeek = new URL(request.url).searchParams.get('week')
+    const rawWeek = url.searchParams.get('week')
     const week = rawWeek && /^\d{1,2}$/.test(rawWeek) ? Number(rawWeek) : null
     const { teamAlignment } = await gqlAnonymous(ALIGNMENT, { teamSlug: params.slug, year, week })
     const weeks = teamAlignment?.weeks ?? []

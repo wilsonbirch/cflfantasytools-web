@@ -22,7 +22,12 @@ const player = (id: number, over: Record<string, unknown>) => ({
 })
 
 const run = (qs: string) =>
-    loader({ request: new Request(`http://x/fantasy${qs}`), params: {}, context: {} } as never)
+    loader({
+        request: new Request(`http://x/fantasy${qs}`),
+        url: new URL(`http://x/fantasy${qs}`),
+        params: {},
+        context: {},
+    } as never)
 
 describe('fantasy loader', () => {
     it('defaults to the first incomplete gameweek and sorts by salary', async () => {

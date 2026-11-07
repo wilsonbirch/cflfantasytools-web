@@ -5,10 +5,10 @@ import { graphql } from '~/graphql/generated'
 import { fmtDate, fmtEpa, ZONES, zoneLabel } from '~/lib/format'
 import { gqlAnonymous } from '~/lib/gql.server'
 
-export const meta: Route.MetaFunction = ({ data }) => [
+export const meta: Route.MetaFunction = ({ loaderData }) => [
     {
-        title: data?.game
-            ? `${data.game.awayTeam?.abbreviation} @ ${data.game.homeTeam?.abbreviation} ${data.game.year} — 3 Down Fantasy`
+        title: loaderData?.game
+            ? `${loaderData.game.awayTeam?.abbreviation} @ ${loaderData.game.homeTeam?.abbreviation} ${loaderData.game.year} — 3 Down Fantasy`
             : 'Game — 3 Down Fantasy',
     },
 ]

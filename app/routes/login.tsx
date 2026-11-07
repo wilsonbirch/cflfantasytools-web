@@ -19,10 +19,10 @@ const LOGIN = graphql(`
     }
 `)
 
-export async function loader({ request }: Route.LoaderArgs) {
+export async function loader({ request, url }: Route.LoaderArgs) {
     const { viewer } = await getViewer(request)
     if (viewer) throw redirect('/account')
-    return { redirectTo: safeRedirect(new URL(request.url).searchParams.get('redirectTo')) }
+    return { redirectTo: safeRedirect(url.searchParams.get('redirectTo')) }
 }
 
 export async function action({ request }: Route.ActionArgs) {

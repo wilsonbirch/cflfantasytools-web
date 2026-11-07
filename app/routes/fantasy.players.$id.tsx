@@ -8,8 +8,8 @@ import { graphql } from '~/graphql/generated'
 import { fmtDate, fmtDelta, fmtEpa, fmtPts, fmtSalary, POSITION_LABEL } from '~/lib/format'
 import { gqlAnonymous } from '~/lib/gql.server'
 
-export const meta: Route.MetaFunction = ({ data }) => [
-    { title: `${data?.player.name ?? 'Player'} — Fantasy — 3 Down Fantasy` },
+export const meta: Route.MetaFunction = ({ loaderData }) => [
+    { title: `${loaderData?.player.name ?? 'Player'} — Fantasy — 3 Down Fantasy` },
 ]
 
 const PLAYER = graphql(`
@@ -77,10 +77,10 @@ const PLAYER = graphql(`
     }
 `)
 
-export async function loader({ request, params }: Route.LoaderArgs) {
+export async function loader({ url, params }: Route.LoaderArgs) {
     const id = Number(params.id)
     if (!Number.isInteger(id) || id <= 0) throw data('Bad player id', { status: 400 })
-    const gwRaw = new URL(request.url).searchParams.get('gw')
+    const gwRaw = url.searchParams.get('gw')
     const gameweekId = gwRaw && /^\d+$/.test(gwRaw) ? Number(gwRaw) : null
     const { fantasyPlayer } = await gqlAnonymous(PLAYER, { id, gameweekId })
     if (!fantasyPlayer) throw data('Player not found', { status: 404 })

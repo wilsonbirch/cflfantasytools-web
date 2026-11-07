@@ -24,17 +24,23 @@ export async function getViewer(
     return { viewer: data?.me ?? null, headers }
 }
 
-export async function requireUser(request: Request) {
+/**
+ * `url` is the loader/action `url` arg: the location the user asked for, with
+ * React Router's `.data` suffix and `_routes`/`index` params removed. Never
+ * derive the return path from `request.url`: on a client-side navigation that
+ * is the raw `/account.data?_routes=…` fetch (always, from v8 on), and logging
+ * in would land the user on the turbo-stream payload instead of the page.
+ */
+export async function requireUser(request: Request, url: URL) {
     const result = await getViewer(request)
     if (!result.viewer) {
-        const { pathname, search } = new URL(request.url)
-        throw redirect(`/login?redirectTo=${encodeURIComponent(pathname + search)}`)
+        throw redirect(`/login?redirectTo=${encodeURIComponent(url.pathname + url.search)}`)
     }
     return { ...result, viewer: result.viewer }
 }
 
-export async function requireAdmin(request: Request) {
-    const result = await requireUser(request)
+export async function requireAdmin(request: Request, url: URL) {
+    const result = await requireUser(request, url)
     if (result.viewer.role !== 'ADMIN') throw data('Forbidden', { status: 403 })
     return result
 }
