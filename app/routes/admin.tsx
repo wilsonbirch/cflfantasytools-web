@@ -6,8 +6,8 @@ import { requireAdmin } from '~/lib/auth.server'
 export const meta: Route.MetaFunction = () => [{ title: 'Admin — 3 Down Fantasy' }]
 
 // Child loaders run in parallel with this one, so each child guards itself too.
-export async function loader({ request }: Route.LoaderArgs) {
-    const { headers } = await requireAdmin(request)
+export async function loader({ request, url }: Route.LoaderArgs) {
+    const { headers } = await requireAdmin(request, url)
     return data(null, { headers })
 }
 

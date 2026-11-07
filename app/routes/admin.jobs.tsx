@@ -35,16 +35,16 @@ const ENQUEUE = graphql(`
 const STATUSES = Object.values(JobStatus)
 const isStatus = (s: string | null): s is JobStatus => STATUSES.includes(s as JobStatus)
 
-export async function loader({ request }: Route.LoaderArgs) {
-    await requireAdmin(request)
-    const raw = new URL(request.url).searchParams.get('status')
+export async function loader({ request, url }: Route.LoaderArgs) {
+    await requireAdmin(request, url)
+    const raw = url.searchParams.get('status')
     const status = isStatus(raw) ? raw : null
     const { data: d, headers } = await gqlAsViewer(request, JOBS, { status })
     return data({ status, jobs: d.jobs, kinds: d.jobHealth.map((h) => h.kind) }, { headers })
 }
 
-export async function action({ request }: Route.ActionArgs) {
-    await requireAdmin(request)
+export async function action({ request, url }: Route.ActionArgs) {
+    await requireAdmin(request, url)
     const kind = String((await request.formData()).get('kind') ?? '')
     if (!/^[a-z0-9-]{1,64}$/.test(kind))
         return data({ error: 'Bad job kind', queued: null }, { status: 400 })

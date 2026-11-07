@@ -6,8 +6,8 @@ import { graphql } from '~/graphql/generated'
 import { gqlAnonymous, gqlAsViewer } from '~/lib/gql.server'
 import { hasSession } from '~/lib/session.server'
 
-export const meta: Route.MetaFunction = ({ data }) => [
-    { title: `${data?.team.name ?? 'Team'} — 3 Down Fantasy` },
+export const meta: Route.MetaFunction = ({ loaderData }) => [
+    { title: `${loaderData?.team.name ?? 'Team'} — 3 Down Fantasy` },
 ]
 
 const TEAM = graphql(`

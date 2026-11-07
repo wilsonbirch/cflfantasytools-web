@@ -48,8 +48,8 @@ const UPDATE_SOURCE = graphql(`
     }
 `)
 
-export async function loader({ request }: Route.LoaderArgs) {
-    await requireAdmin(request)
+export async function loader({ request, url }: Route.LoaderArgs) {
+    await requireAdmin(request, url)
     const { data: d, headers } = await gqlAsViewer(request, SCRAPERS)
     // Newest first, so the first run seen per team is its latest.
     const latest = new Map<string, (typeof d.scrapeRuns)[number]>()
@@ -60,8 +60,8 @@ export async function loader({ request }: Route.LoaderArgs) {
     )
 }
 
-export async function action({ request }: Route.ActionArgs) {
-    await requireAdmin(request)
+export async function action({ request, url: pageUrl }: Route.ActionArgs) {
+    await requireAdmin(request, pageUrl)
     const form = await request.formData()
     const id = Number(form.get('id'))
     if (!Number.isInteger(id) || id <= 0)

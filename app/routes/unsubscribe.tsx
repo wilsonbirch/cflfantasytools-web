@@ -13,8 +13,8 @@ const UNSUBSCRIBE_WITH_TOKEN = graphql(`
 
 // Reached from a link in a notification email, so it has to work on GET. The
 // token is signed by the api; a forged or stale one simply fails.
-export async function loader({ request }: Route.LoaderArgs) {
-    const token = new URL(request.url).searchParams.get('token')
+export async function loader({ url }: Route.LoaderArgs) {
+    const token = url.searchParams.get('token')
     if (!token || token.length > 512) return { ok: false }
     const ok = await gqlAnonymous(UNSUBSCRIBE_WITH_TOKEN, { token })
         .then((r) => r.unsubscribeWithToken)

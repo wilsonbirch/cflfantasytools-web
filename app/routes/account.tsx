@@ -5,8 +5,8 @@ import { requireUser } from '~/lib/auth.server'
 
 export const meta: Route.MetaFunction = () => [{ title: 'Account — 3 Down Fantasy' }]
 
-export async function loader({ request }: Route.LoaderArgs) {
-    const { viewer, headers } = await requireUser(request)
+export async function loader({ request, url }: Route.LoaderArgs) {
+    const { viewer, headers } = await requireUser(request, url)
     return data({ viewer }, { headers })
 }
 

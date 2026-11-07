@@ -83,8 +83,8 @@ const SORTS = {
 type SortKey = keyof typeof SORTS
 const isSortKey = (k: string | null): k is SortKey => k != null && Object.hasOwn(SORTS, k)
 
-export async function loader({ request }: Route.LoaderArgs) {
-    const q = new URL(request.url).searchParams
+export async function loader({ url }: Route.LoaderArgs) {
+    const q = url.searchParams
     const year = parseYear(q.get('year'))
     const gwRaw = q.get('gw')
     const gameweekId = gwRaw && /^\d+$/.test(gwRaw) ? Number(gwRaw) : null

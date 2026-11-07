@@ -60,8 +60,7 @@ const COLUMNS = [
 type SortKey = (typeof COLUMNS)[number][0]
 const isSortKey = (k: string | null): k is SortKey => COLUMNS.some(([c]) => c === k)
 
-export async function loader({ request }: Route.LoaderArgs) {
-    const url = new URL(request.url)
+export async function loader({ url }: Route.LoaderArgs) {
     const year = parseYear(url.searchParams.get('year'))
     const team = url.searchParams.get('team') ?? ''
     const sortParam = url.searchParams.get('sort')
