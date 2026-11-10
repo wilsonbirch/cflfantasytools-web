@@ -6,15 +6,6 @@ updates:
           interval: 'weekly'
       open-pull-requests-limit: 10
       groups:
-          # Scoped packages are listed BY NAME. Dependabot ranks a group's exact
-          # names above minor-and-patch but its '@scope/*' wildcards below it, so a
-          # member matched only by a wildcard is pulled out of its group, majors
-          # included. Job log, 2026-11-10: "Skipping @vitest/coverage-v8 for group
-          # 'vitest' - belongs to more specific group 'minor-and-patch'" (vitest 5
-          # and coverage-v8 5 then came as two PRs that each fail `npm ci`; in web,
-          # react-router 8 split from @react-router/*). The wildcards don't hold
-          # anything on their own: add every new scoped package here by name.
-          #
           # Coupled stacks come FIRST — a group earlier in this list wins the
           # package, and minor-and-patch below would otherwise claim their
           # minor/patch bumps and split the stack across PRs.
@@ -38,10 +29,6 @@ updates:
           react-router:
               patterns:
                   - 'react-router'
-                  - '@react-router/dev'
-                  - '@react-router/fs-routes'
-                  - '@react-router/node'
-                  - '@react-router/serve'
                   - '@react-router/*'
               update-types:
                   - 'major'
@@ -54,8 +41,6 @@ updates:
               patterns:
                   - 'graphql'
                   - 'graphql-request'
-                  - '@graphql-codegen/cli'
-                  - '@graphql-codegen/client-preset'
                   - '@graphql-codegen/*'
               update-types:
                   - 'major'
@@ -64,7 +49,6 @@ updates:
           vitest:
               patterns:
                   - 'vitest'
-                  - '@vitest/ui'
                   - '@vitest/*'
                   - 'vitest-mock-extended'
               update-types:
@@ -76,13 +60,22 @@ updates:
           tailwind:
               patterns:
                   - 'tailwindcss'
-                  - '@tailwindcss/vite'
                   - '@tailwindcss/*'
               update-types:
                   - 'major'
                   - 'minor'
                   - 'patch'
+          # patterns: ['*'] is load-bearing. Dependabot scores a group with NO
+          # patterns at 500 for every package, above a '@scope/*' wildcard (~100),
+          # so without it this group pulled @vitest/coverage-v8, @react-router/*,
+          # @pothos/* etc. out of their coupled groups, majors included (job log
+          # 2026-11-10: "Skipping @vitest/coverage-v8 for group 'vitest' - belongs
+          # to more specific group 'minor-and-patch'"). A bare '*' scores 1, so
+          # every coupled group above wins. Source: dependabot-core
+          # updater/lib/dependabot/updater/pattern_specificity_calculator.rb.
           minor-and-patch:
+              patterns:
+                  - '*'
               update-types:
                   - 'minor'
                   - 'patch'
