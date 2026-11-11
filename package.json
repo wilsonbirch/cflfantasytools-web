@@ -28,7 +28,6 @@
         "baseline-browser-mapping": "^2.10.29",
         "caniuse-lite": "^1.0.30001792",
         "graphql": "^16.11.0",
-        "graphql-request": "^7.2.0",
         "isbot": "^5.1.40",
         "next-themes": "^0.4.3",
         "react": "^19.3.1",
