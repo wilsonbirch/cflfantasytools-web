@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { gqlAnonymous } from '~/lib/gql.server'
 import { action, loader } from '~/routes/login'
+import { action as registerAction } from '~/routes/register'
 
 const tokens = {
     accessToken: 'a',
@@ -22,6 +23,22 @@ describe('login loader', () => {
 
     it('falls back to / for an off-site redirectTo', async () => {
         const href = 'http://x/login?redirectTo=%2F%2Fevil.example'
+        const result = await loader({
+            request: new Request(href),
+            url: new URL(href),
+            params: {},
+            context: {},
+        } as never)
+        expect(result).toEqual({ redirectTo: '/' })
+    })
+
+    it.each([
+        '%2F%5Cevil.test%2Fteams',
+        '%2F%09%2Fevil.test',
+        '%2F%2E%2E%2F%2Fevil.test',
+        '%2F%252F%2Fevil.test',
+    ])('falls back to / for the normalisation trick redirectTo=%s', async (q) => {
+        const href = `http://x/login?redirectTo=${q}`
         const result = await loader({
             request: new Request(href),
             url: new URL(href),
@@ -60,6 +77,52 @@ describe('login action', () => {
             password: 'correct horse battery',
             redirectTo: 'https://evil.example/',
         }).catch((e) => e)
+        expect(res.headers.get('Location')).toBe('/')
+    })
+
+    // Browsers read `\` as `/` and drop tabs and newlines, so each of these
+    // would land on //evil.test if it reached the Location header unchanged.
+    it.each(['/\\evil.test/teams', '/\t/evil.test', '/\n/evil.test', '/..//evil.test'])(
+        'sends a successful login with redirectTo %j to / instead',
+        async (redirectTo) => {
+            vi.mocked(gqlAnonymous).mockResolvedValueOnce({ login: tokens })
+            const res = await post({
+                email: 'a@b.c',
+                password: 'correct horse battery',
+                redirectTo,
+            }).catch((e) => e)
+            expect(res).toBeInstanceOf(Response)
+            expect(res.status).toBe(302)
+            expect(res.headers.get('Location')).toBe('/')
+        },
+    )
+
+    it('echoes only the safe fallback back into the form on a failed login', async () => {
+        vi.mocked(gqlAnonymous).mockRejectedValueOnce(new Error('bad credentials'))
+        const res = await post({
+            email: 'a@b.c',
+            password: 'wrong horse battery',
+            redirectTo: '/\\evil.test',
+        })
+        expect(res).toMatchObject({ data: { redirectTo: '/' }, init: { status: 401 } })
+    })
+})
+
+describe('register action', () => {
+    it('never redirects off-site via backslash normalisation', async () => {
+        vi.mocked(gqlAnonymous).mockResolvedValueOnce({ register: tokens })
+        const body = new FormData()
+        body.set('email', 'a@b.c')
+        body.set('password', 'correct horse battery')
+        body.set('redirectTo', '/\\evil.test/teams')
+        const request = new Request('http://x/register.data', { method: 'POST', body })
+        const res = await registerAction({
+            request,
+            url: new URL('http://x/register'),
+            params: {},
+            context: {},
+        } as never).catch((e) => e)
+        expect(res).toBeInstanceOf(Response)
         expect(res.headers.get('Location')).toBe('/')
     })
 })
