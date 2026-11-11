@@ -86,17 +86,33 @@ updates:
               applies-to: security-updates
               patterns:
                   - '*'
-      # Nothing is ignored here yet, deliberately. This repo is still on
-      # typescript 5.x while the API runs 6.x, so the next major is one we
-      # want — blocking majors wholesale, as the API config does, would pin
-      # this below a version already proven in the other repo.
+      # Each ignore below is a major that cannot install today because a
+      # dependency's peer range excludes it — the PR fails `npm ci` with
+      # ERESOLVE and nothing short of overrides gets it through. Each names
+      # what unblocks it; delete the entry once that ships. Majors are NOT
+      # blocked wholesale, as the API config does: this repo is still on
+      # typescript 5.x while the API runs 6.x, so the next major there is one
+      # we want.
+      ignore:
+          # eslint 10 (#32, checked 2026-11-10): eslint-plugin-import 2.32.0,
+          # eslint-plugin-react 7.37.5 and eslint-plugin-jsx-a11y 6.10.2 all
+          # peer on eslint <=9, and eslint-plugin-react crashes under 10.
+          # Unblocks when all three release eslint 10 support
+          # (import-js/eslint-plugin-import#3278,
+          # jsx-eslint/eslint-plugin-react#3977,
+          # jsx-eslint/eslint-plugin-jsx-a11y#1075). @eslint/js 10 peers on
+          # eslint 10, so it is held with it.
+          - dependency-name: 'eslint'
+            update-types: ['version-update:semver-major']
+          - dependency-name: '@eslint/js'
+            update-types: ['version-update:semver-major']
       #
       # typescript 7 IS known-blocked: it is the native compiler rewrite and
       # typescript-eslint hard-caps its peer range below it, so `npm ci`
-      # ERESOLVEs rather than merely warning. Add the ignore below once this
-      # repo reaches 6.x, rather than now:
+      # ERESOLVEs rather than merely warning. Add this entry to the ignore
+      # list above once this repo reaches 6.x, rather than now — today it
+      # would also hold back 6.x:
       #
-      #   ignore:
       #     - dependency-name: 'typescript'
       #       update-types: ['version-update:semver-major']
       #
