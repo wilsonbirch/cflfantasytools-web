@@ -4,7 +4,7 @@ import { config as loadEnv } from 'dotenv'
 const testEnv = loadEnv({ path: '.env.test' }).parsed ?? {}
 
 // Belt-and-suspenders: mutate the parent's process.env so every nested subprocess
-// (Playwright's webServer, the npm scripts it spawns, vite, remix-serve) inherits
+// (Playwright's webServer, the npm scripts it spawns, vite, server/main.ts) inherits
 // these values directly — not just via webServer.env. Some CI shells have been
 // observed to drop webServer.env keys when launching nested shells.
 Object.assign(process.env, testEnv)

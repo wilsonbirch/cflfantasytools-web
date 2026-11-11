@@ -1,6 +1,6 @@
 # cflfantasytools-web
 
-Web client for cflfantasytools — React Router v7 (SSR), HeroUI, Tailwind v4.
+Web client for cflfantasytools — React Router v8 (SSR), HeroUI, Tailwind v4.
 
 It holds no database access. Every read and write goes to `cflfantasytools-api`
 over GraphQL, server-side, from a loader or action.
@@ -26,6 +26,14 @@ npm run codegen && git diff --exit-code app/graphql/generated
 npm run test
 npm run build      # the ONLY check that catches .server.ts leaking client-side
 ```
+
+## Production server
+
+`npm start` runs `server/main.ts` (Node runs the TypeScript directly), not
+`react-router-serve`. It is the same Express setup plus `trust proxy`: React
+Router v8 rejects an action whose `Origin` scheme differs from `request.url`'s,
+and behind a TLS-terminating proxy that is every action unless the scheme comes
+from `X-Forwarded-Proto`. The deploy image needs `server/` alongside `build/`.
 
 ## How auth works
 
