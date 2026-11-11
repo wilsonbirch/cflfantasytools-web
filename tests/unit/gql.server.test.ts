@@ -212,6 +212,40 @@ describe('errors throw', () => {
         await expect(gqlAnonymous('{ isUp }')).rejects.toThrow(GraphQLRequestError)
     })
 
+    // graphql-request resolved these with undefined or null; yoga never sends them.
+    it.each([
+        ['{}', {}],
+        ['{"errors":[]}', { errors: [] }],
+        ['{"extensions":{}}', { extensions: {} }],
+        ['{"data":null}', { data: null }],
+    ])('throws on a 2xx result with no data: %s', async (_label, payload) => {
+        fetchMock.mockResolvedValue(reply(payload))
+        const err = await rejection(gqlAnonymous('{ isUp }'))
+        expect(err).toBeInstanceOf(GraphQLRequestError)
+        expect((err as Error).message).toBe('Invalid GraphQL response: no data')
+    })
+
+    it('throws on a 204 with no body', async () => {
+        fetchMock.mockResolvedValue(new Response(null, { status: 204 }))
+        const err = (await rejection(gqlAnonymous('{ isUp }'))) as InstanceType<
+            typeof GraphQLRequestError
+        >
+        expect(err).toBeInstanceOf(GraphQLRequestError)
+        expect(err.message).toBe('Invalid GraphQL response')
+        expect(err.response.status).toBe(204)
+    })
+
+    it('throws on a 200 with an empty body, with or without a JSON content type', async () => {
+        fetchMock.mockResolvedValue(reply('', 200, 'application/json'))
+        const typed = await rejection(gqlAnonymous('{ isUp }'))
+        expect(typed).toBeInstanceOf(GraphQLRequestError)
+        expect((typed as Error).cause).toBeInstanceOf(SyntaxError)
+        fetchMock.mockResolvedValue(new Response('', { status: 200 }))
+        const untyped = await rejection(gqlAnonymous('{ isUp }'))
+        expect(untyped).toBeInstanceOf(GraphQLRequestError)
+        expect((untyped as Error).message).toBe('Invalid GraphQL response')
+    })
+
     it('lets a network failure from fetch propagate unchanged', async () => {
         const down = new TypeError('fetch failed')
         fetchMock.mockRejectedValue(down)

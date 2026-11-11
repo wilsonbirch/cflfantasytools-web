@@ -159,6 +159,10 @@ async function send<T, V>(
         const message = errors[0]?.message ?? `GraphQL Error (Code: ${res.status})`
         throw fail(message, { data, errors: errors.length ? errors : undefined, extensions })
     }
+    // A success with no data (`{}`, `{"data":null}`) is not one. graphql-request
+    // resolved these, and yoga never sends them; refuse rather than hand a
+    // caller `undefined` typed as T.
+    if (data == null) throw fail('Invalid GraphQL response: no data', { data, extensions })
     return data as T
 }
 
