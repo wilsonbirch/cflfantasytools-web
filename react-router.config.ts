@@ -1,12 +1,9 @@
 import type { Config } from '@react-router/dev/config'
 
+// v8 passes the raw request to loaders and actions (the old
+// `future.v8_passThroughRequests` behaviour, now the only one), so on client
+// navigations `request.url` is the `/path.data?_routes=…` fetch. Read the
+// location from the `url` arg instead.
 export default {
     ssr: true,
-    future: {
-        // v8's behaviour, adopted early: loaders and actions get the raw
-        // request, so on client navigations `request.url` is the
-        // `/path.data?_routes=…` fetch. Read the location from the `url` arg.
-        // Delete this block in the v8 bump: v8 rejects the flag at startup.
-        v8_passThroughRequests: true,
-    },
 } satisfies Config

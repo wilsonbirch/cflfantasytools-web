@@ -25,7 +25,7 @@ updates:
                   - 'patch'
           # The framework packages share a version line — @react-router/dev
           # generates types the router runtime has to match, and
-          # @react-router/node and /serve ship as one release.
+          # @react-router/node and /express ship as one release.
           react-router:
               patterns:
                   - 'react-router'
