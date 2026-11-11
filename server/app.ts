@@ -3,7 +3,20 @@ import { createRequestHandler } from '@react-router/express'
 import compression from 'compression'
 import express from 'express'
 import morgan from 'morgan'
+import type { RequestHandler } from 'express'
 import type { ServerBuild } from 'react-router'
+
+/** Keep only a valid forwarded scheme; never let a forwarded host reach the app. */
+export const forwardedSchemeOnly: RequestHandler = (req, _res, next) => {
+    delete req.headers['x-forwarded-host']
+    const raw = req.headers['x-forwarded-proto']
+    if (raw !== undefined) {
+        const first = String(raw).split(',')[0].trim().toLowerCase()
+        if (first === 'http' || first === 'https') req.headers['x-forwarded-proto'] = first
+        else delete req.headers['x-forwarded-proto']
+    }
+    next()
+}
 
 /**
  * The production HTTP server: what `react-router-serve` gave us, plus
@@ -19,7 +32,11 @@ import type { ServerBuild } from 'react-router'
  * URL the browser used and the origin check compares like with like. A foreign
  * `Origin` still fails it. This needs no knowledge of the public hostname.
  *
- * `1` trusts exactly one hop: the proxy directly in front of us.
+ * `1` trusts exactly one hop: the proxy directly in front of us. We only want
+ * the scheme from it, so `forwardedSchemeOnly` drops `X-Forwarded-Host` (the
+ * host stays the real `Host` header) and drops an `X-Forwarded-Proto` that is
+ * not `http` or `https`, which would otherwise build an invalid `request.url`
+ * and 500.
  *
  * The rest mirrors `react-router-serve` 8.5.1: compression, hashed assets
  * cached for a year as immutable, the rest of the client build and `public/`
@@ -31,6 +48,7 @@ export function createApp(build: ServerBuild, { logRequests = true } = {}) {
 
     app.disable('x-powered-by')
     app.set('trust proxy', 1)
+    app.use(forwardedSchemeOnly)
     app.use(compression())
     app.use(
         path.posix.join(build.publicPath, 'assets'),

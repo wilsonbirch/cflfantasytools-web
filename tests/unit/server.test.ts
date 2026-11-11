@@ -43,6 +43,7 @@ let assetsDir: string
 let server: Server
 let origin: string // what the app sees: http://127.0.0.1:<port>
 let host: string
+let port: number
 
 beforeAll(async () => {
     assetsDir = mkdtempSync(path.join(tmpdir(), 'web-server-test-'))
@@ -53,7 +54,8 @@ beforeAll(async () => {
     )
     server = createApp(fakeBuild(assetsDir), { logRequests: false }).listen(0, '127.0.0.1')
     await new Promise((resolve) => server.once('listening', resolve))
-    host = `127.0.0.1:${(server.address() as AddressInfo).port}`
+    port = (server.address() as AddressInfo).port
+    host = `127.0.0.1:${port}`
     origin = `http://${host}`
 })
 
@@ -70,6 +72,55 @@ const post = (pathname: string, headers: Record<string, string>) =>
         body: 'x=1',
         redirect: 'manual',
     })
+
+describe('forwarded headers: scheme only, and only a valid one', () => {
+    for (const pathname of ['/', '/_.data']) {
+        describe(`POST ${pathname}`, () => {
+            it('ignores X-Forwarded-Host, so a spoofed host cannot match a foreign Origin', async () => {
+                // Same port as the real Host: @react-router/express takes the
+                // port from Host when the forwarded host has none, so a
+                // portless spoof would mismatch on port alone and prove nothing.
+                const spoofed = `evil.test:${port}`
+                const res = await post(pathname, {
+                    Origin: `https://${spoofed}`,
+                    'X-Forwarded-Host': spoofed,
+                    'X-Forwarded-Proto': 'https',
+                })
+                expect(res.status).toBe(400)
+            })
+
+            it('still accepts the real host over https with an X-Forwarded-Host present', async () => {
+                const res = await post(pathname, {
+                    Origin: `https://${host}`,
+                    'X-Forwarded-Host': 'evil.test',
+                    'X-Forwarded-Proto': 'https',
+                })
+                expect(res.status).toBe(200)
+            })
+
+            it('takes the first value of a comma list, case-insensitively', async () => {
+                const res = await post(pathname, {
+                    Origin: `https://${host}`,
+                    'X-Forwarded-Proto': 'HTTPS, http',
+                })
+                expect(res.status).toBe(200)
+            })
+
+            for (const [name, value] of [
+                ['X-Forwarded-Proto', 'ht tp'],
+                ['X-Forwarded-Proto', 'javascript'],
+                ['X-Forwarded-Host', '['],
+                ['X-Forwarded-Host', 'evil.test:99999'],
+            ]) {
+                it(`falls back to the socket for a malformed ${name}: ${value}`, async () => {
+                    // Not a 500 from an invalid request.url: the action runs over plain http.
+                    const res = await post(pathname, { Origin: origin, [name]: value })
+                    expect(res.status).toBe(200)
+                })
+            }
+        })
+    }
+})
 
 describe('action origin check behind a TLS-terminating proxy', () => {
     for (const pathname of ['/', '/_.data']) {
