@@ -106,13 +106,6 @@ updates:
             update-types: ['version-update:semver-major']
           - dependency-name: '@eslint/js'
             update-types: ['version-update:semver-major']
-          # graphql 17 (#28, checked 2026-11-10): the codegen packages accept
-          # it; graphql-request 7.4.0 peers on graphql 14 - 16. Unblocks when
-          # graffle-js/graffle#1499 is released, or if gql.server.ts drops
-          # graphql-request for a fetch wrapper. Only graphql's own major is
-          # held — codegen and graphql-request majors still arrive.
-          - dependency-name: 'graphql'
-            update-types: ['version-update:semver-major']
       #
       # typescript 7 IS known-blocked: it is the native compiler rewrite and
       # typescript-eslint hard-caps its peer range below it, so `npm ci`
