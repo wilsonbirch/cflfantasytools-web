@@ -59,6 +59,9 @@ function hasUnsafeChar(s: string, whitespace: boolean) {
     return false
 }
 
+// Far longer than any path a route builds; a longer redirectTo is not ours.
+const MAX_REDIRECT_LENGTH = 2048
+
 /**
  * Only same-origin paths may be used as a post-login destination; anything
  * else becomes `fallback`.
@@ -66,31 +69,47 @@ function hasUnsafeChar(s: string, whitespace: boolean) {
  * Browsers strip tabs and newlines from a URL and treat `\` as `/`, so a
  * prefix check alone lets `/\evil.test` or `/<tab>/evil.test` through as the
  * protocol-relative `//evil.test`. The value has already been percent-decoded
- * once (URLSearchParams / FormData), so it is rejected outright if it has any
- * whitespace, control character or backslash, and again if a further decode
- * would produce a control character, a backslash or a leading `//`. What is
- * left is resolved against a fixed origin, and the normalised path, query and
- * hash are returned only if the origin is unchanged and the path does not
- * collapse to `//…` (`/..//evil.test` does).
+ * once (URLSearchParams / FormData), so it is rejected outright if it is over
+ * MAX_REDIRECT_LENGTH or has any whitespace, control character or backslash,
+ * and again if a further decode would produce a control character, a
+ * backslash or a leading `//`. What is left is resolved against a fixed
+ * origin, and the normalised path, query and hash are returned only if the
+ * origin is unchanged and the path does not collapse to `//…` (`/..//x`
+ * does).
+ *
+ * Normalising can turn an accepted input into one these checks would reject
+ * (`/./%2Fevil.test` resolves to `/%2Fevil.test`), so a resolved value that
+ * differs from the input must pass the same checks before it is returned.
  */
 export function safeRedirect(to: unknown, fallback = '/') {
-    if (typeof to !== 'string' || !to.startsWith('/') || to.startsWith('//')) return fallback
-    if (hasUnsafeChar(to, true)) return fallback
+    const resolved = resolveInternal(to)
+    if (resolved === null) return fallback
+    if (resolved === to) return resolved
+    // One more pass, not recursion: URL normalisation is idempotent, so a value
+    // that still changes on its second resolution is not one we produced.
+    return resolveInternal(resolved) === resolved ? resolved : fallback
+}
+
+/** The normalised same-origin path + query + hash for `to`, or null. */
+function resolveInternal(to: unknown): string | null {
+    if (typeof to !== 'string' || to.length > MAX_REDIRECT_LENGTH) return null
+    if (!to.startsWith('/') || to.startsWith('//')) return null
+    if (hasUnsafeChar(to, true)) return null
 
     let decoded: string
     try {
         decoded = decodeURIComponent(to)
     } catch {
-        return fallback
+        return null
     }
-    if (decoded.startsWith('//') || hasUnsafeChar(decoded, false)) return fallback
+    if (decoded.startsWith('//') || hasUnsafeChar(decoded, false)) return null
 
     let url: URL
     try {
         url = new URL(to, INTERNAL_ORIGIN)
     } catch {
-        return fallback
+        return null
     }
-    if (url.origin !== INTERNAL_ORIGIN || url.pathname.startsWith('//')) return fallback
+    if (url.origin !== INTERNAL_ORIGIN || url.pathname.startsWith('//')) return null
     return url.pathname + url.search + url.hash
 }

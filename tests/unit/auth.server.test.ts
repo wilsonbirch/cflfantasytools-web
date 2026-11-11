@@ -93,6 +93,11 @@ describe('safeRedirect', () => {
         ['single dot collapsing to //', '/.//evil.test'],
         ['encoded dot segments collapsing to //', '/%2e%2e//evil.test'],
         ['nested dot segments collapsing to //', '/a/..//evil.test'],
+        // Accepted as input, but normalise to a value safeRedirect itself rejects.
+        ['dot segment exposing an encoded slash', '/./%2Fevil.test/x'],
+        ['encoded dot segments exposing an encoded slash', '/x/%2e%2e/%2Fevil.test/x'],
+        ['dot segment exposing encoded double slash', '/./%2f%2fevil.test/x'],
+        ['over 2048 characters', '/' + 'a'.repeat(2048)],
     ])('rejects %s', (_, to) => {
         expect(safeRedirect(to)).toBe('/')
         expect(safeRedirect(to, '/account')).toBe('/account')
@@ -115,6 +120,7 @@ describe('safeRedirect', () => {
         ['encoded slash inside a segment', '/teams/a%2Fb', '/teams/a%2Fb'],
         ['requireUser round trip', '/teams/bc-lions?y=2026', '/teams/bc-lions?y=2026'],
         ['harmless dot segments, normalised', '/teams/../account', '/account'],
+        ['exactly 2048 characters', '/' + 'a'.repeat(2047), '/' + 'a'.repeat(2047)],
     ])('accepts %s', (_, to, expected) => {
         expect(safeRedirect(to)).toBe(expected)
     })

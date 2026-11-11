@@ -80,8 +80,11 @@ describe('login action', () => {
         expect(res.headers.get('Location')).toBe('/')
     })
 
-    // Browsers read `\` as `/` and drop tabs and newlines, so each of these
-    // would land on //evil.test if it reached the Location header unchanged.
+    // `/\evil.test` (read as `//evil.test`) and a raw tab before the host
+    // (stripped by Chromium on a no-JS login) were the real off-site redirects.
+    // `Headers` refuses LF, so `/\n/…` could never reach a Location header, and
+    // `/..//evil.test` stays on-site as a raw Location; it is here because
+    // safeRedirect returns the normalised path, which would be `//evil.test`.
     it.each(['/\\evil.test/teams', '/\t/evil.test', '/\n/evil.test', '/..//evil.test'])(
         'sends a successful login with redirectTo %j to / instead',
         async (redirectTo) => {
